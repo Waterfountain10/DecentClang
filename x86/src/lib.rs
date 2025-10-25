@@ -11,7 +11,7 @@ pub enum Imm {
     Lbl(Lbl),
 }
 
-#[derive(Debug, Clone, Eq, Copy)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Copy)]
 pub enum Reg {
     Rip,
     Rax,
@@ -73,7 +73,7 @@ pub enum Opcode {
     Jmp,
     J(Cnd),
     Cmpq,
-    Set(Cdn),
+    Set(Cnd),
     Callq,
     Retq,
 }
