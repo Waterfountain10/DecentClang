@@ -106,9 +106,12 @@ pub struct Elem {
     pub asm: Asm,
 }
 
-pub type Prog = Vec<Elem>;
+#[derive(Debug, Clone)]
+pub struct Prog(pub Vec<Elem>);
 
+// -----------------------------------------------------------------------------
 // Syntactic sugar for writing x86 assembly code
+// -----------------------------------------------------------------------------
 pub mod asm {
     use super::*;
 
@@ -164,5 +167,159 @@ pub mod asm {
             global: true,
             asm: Asm::Text(is),
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Pretty printing
+// -----------------------------------------------------------------------------
+
+impl fmt::Display for Reg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Reg::Rip => "%rip",
+            Reg::Rax => "%rax",
+            Reg::Rbx => "%rbx",
+            Reg::Rcx => "%rcx",
+            Reg::Rdx => "%rdx",
+            Reg::Rsi => "%rsi",
+            Reg::Rdi => "%rdi",
+            Reg::Rbp => "%rbp",
+            Reg::Rsp => "%rsp",
+            Reg::R08 => "%r8",
+            Reg::R09 => "%r9",
+            Reg::R10 => "%r10",
+            Reg::R11 => "%r11",
+            Reg::R12 => "%r12",
+            Reg::R13 => "%r13",
+            Reg::R14 => "%r14",
+            Reg::R15 => "%r15",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for Imm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Imm::Lit(i) => write!(f, "{}", i),
+            Imm::Lbl(l) => write!(f, "{}", l),
+        }
+    }
+}
+
+impl fmt::Display for Operand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operand::Imm(i) => write!(f, "${}", i),
+            Operand::Reg(r) => write!(f, "{}", r),
+            Operand::Ind1(i) => write!(f, "{}", i),
+            Operand::Ind2(r) => write!(f, "({})", r),
+            Operand::Ind3(i, r) => write!(f, "{}({})", i, r),
+        }
+    }
+}
+
+impl fmt::Display for Cnd {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Cnd::Eq => "e",
+            Cnd::Neq => "ne",
+            Cnd::Gt => "g",
+            Cnd::Ge => "ge",
+            Cnd::Lt => "l",
+            Cnd::Le => "le",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for Opcode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Opcode::Movq => write!(f, "movq"),
+            Opcode::Pushq => write!(f, "pushq"),
+            Opcode::Popq => write!(f, "popq"),
+            Opcode::Leaq => write!(f, "leaq"),
+            Opcode::Incq => write!(f, "incq"),
+            Opcode::Decq => write!(f, "decq"),
+            Opcode::Negq => write!(f, "negq"),
+            Opcode::Notq => write!(f, "notq"),
+            Opcode::Addq => write!(f, "addq"),
+            Opcode::Subq => write!(f, "subq"),
+            Opcode::Imulq => write!(f, "imulq"),
+            Opcode::Xorq => write!(f, "xorq"),
+            Opcode::Orq => write!(f, "orq"),
+            Opcode::Andq => write!(f, "andq"),
+            Opcode::Shlq => write!(f, "shlq"),
+            Opcode::Sarq => write!(f, "sarq"),
+            Opcode::Shrq => write!(f, "shrq"),
+            Opcode::Jmp => write!(f, "jmp"),
+            Opcode::J(c) => write!(f, "j{}", c),
+            Opcode::Cmpq => write!(f, "cmpq"),
+            Opcode::Set(c) => write!(f, "set{}", c),
+            Opcode::Callq => write!(f, "callq"),
+            Opcode::Retq => write!(f, "retq"),
+        }
+    }
+}
+
+impl fmt::Display for Ins {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let args: Vec<String> = self.operands.iter().map(|a| format!("{}", a)).collect();
+        write!(f, "\t{}\t{}", self.opcode, args.join(", "))
+    }
+}
+
+impl fmt::Display for Data {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Data::Asciz(s) => write!(f, "\t.asciz\t\"{}\"", s.escape_default()),
+            Data::Quad(i) => write!(f, "\t.quad\t{}", i),
+        }
+    }
+}
+
+impl fmt::Display for Asm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Asm::Text(ins) => {
+                writeln!(f, "\t.text")?;
+                for i in ins {
+                    writeln!(f, "{}", i)?;
+                }
+            }
+            Asm::Data(ds) => {
+                writeln!(f, "\t.data")?;
+                for d in ds {
+                    writeln!(f, "{}", d)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Elem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let section = match &self.asm {
+            Asm::Text(_) => "\t.text",
+            Asm::Data(_) => "\t.data",
+        };
+        let global = if self.global {
+            format!("\t.globl\t{}\n", self.lbl)
+        } else {
+            "".to_string()
+        };
+        writeln!(f, "{}\n{}{}:\n{}", section, global, self.lbl, self.asm)
+    }
+}
+
+impl fmt::Display for Prog {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for elem in &self.0 {
+            writeln!(f, "{}", elem)?;
+        }
+        Ok(())
     }
 }
