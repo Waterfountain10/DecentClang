@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "lexer",
+    "parser",
+    "oat",
+    "llvm",
+    "x86",
+    "frontend",
+    "backend",
+    "driver"
+]
+resolver = "3"

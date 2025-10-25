@@ -1,0 +1,9 @@
+[package]
+name = "driver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+backend = { path = "../backend" }
+frontend = { path = "../frontend" }
+oat      = { path = "../oat" }
