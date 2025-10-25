@@ -8,5 +8,5 @@ members = [
     "frontend",
     "backend",
     "driver"
-]
+, "assembler", "linker"]
 resolver = "3"
