@@ -38,6 +38,10 @@
 
 use assembler::*;
 use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::Path;
+use x86::asm::*;
 use x86::*;
 
 /// 1 - `filter_sections(prog: &Prog)` — pure, returns separate text/data sections.
@@ -96,31 +100,7 @@ pub fn build_symbol_table(
     Ok((sym_map, text_size, data_pos, data_size))
 }
 
-/// 3 - resolve_labels helper functions
-
-/// Helper: resolve an immediate (Lbl -> Lit with address)
-fn resolve_imm(map: &HashMap<String, i64>, imm: &Imm) -> Result<Imm, UndefinedSym> {
-    match imm {
-        Imm::Lit(addr) => Ok(Imm::Lit(*addr)),
-        Imm::Lbl(lbl) => {
-            let addr = resolve_sym(lbl, map)?;
-            Ok(Imm::Lit(addr))
-        }
-    }
-}
-
-/// Helper: resolve an operand (recursively resolves labels)
-fn resolve_operand(map: &HashMap<String, i64>, op: &Operand) -> Result<Operand, UndefinedSym> {
-    match op {
-        Operand::Imm(i) => Ok(Operand::Imm(resolve_imm(map, i)?)),
-        Operand::Reg(r) => Ok(Operand::Reg(*r)),
-        Operand::Ind1(i) => Ok(Operand::Ind1(resolve_imm(map, i)?)),
-        Operand::Ind2(r) => Ok(Operand::Ind2(*r)),
-        Operand::Ind3(i, r) => Ok(Operand::Ind3(resolve_imm(map, i)?, *r)),
-    }
-}
-
-/// Helper: resolve all operands in an instruction
+/// 3 - resolve_labels for ins
 fn resolve_ins_labels(map: &HashMap<String, i64>, ins: &Ins) -> Result<Ins, UndefinedSym> {
     let resolved_operands: Result<Vec<Operand>, UndefinedSym> = ins
         .operands
@@ -134,7 +114,7 @@ fn resolve_ins_labels(map: &HashMap<String, i64>, ins: &Ins) -> Result<Ins, Unde
     })
 }
 
-/// Helper: resolve data (handles Quad with labels)
+/// 3.5 - resolve_labels for data (handles quad with labels)
 fn resolve_data_labels(map: &HashMap<String, i64>, data: &Data) -> Result<Data, UndefinedSym> {
     match data {
         Data::Asciz(s) => Ok(Data::Asciz(s.clone())),
@@ -225,15 +205,84 @@ pub fn write_executable(exec: &Exec, path: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-fn main() {
-    println!("Assembler ready!");
+/// BINARY ENTRY -- this is where you generate the exec.out file in output/
+/// `cargo run` :                               uses the built in small test placeholder (result is 42)
+/// `cargo run -- input.x86` :                  reads prog from input.x86 -> output/exec.out
+/// `cargo run -- input.x86 output/myprog.out`  reads prof from input.x86 -> output/myprog.out
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+
+    // Default output directory
+    let default_output = "output/exec.out".to_string();
+
+    // Determine behavior
+    match args.len() {
+        1 => {
+            // No arguments -> use placeholder test program
+            println!(">>> No input provided, assembling built-in test program...");
+
+            let main_func = gtext(
+                "main",
+                vec![
+                    Ins {
+                        opcode: Opcode::Movq,
+                        operands: vec![Operand::Imm(Imm::Lit(42)), Operand::Reg(Reg::Rax)],
+                    },
+                    Ins {
+                        opcode: Opcode::Retq,
+                        operands: vec![],
+                    },
+                ],
+            );
+
+            let prog = Prog(vec![main_func]);
+            let exec = assemble(&prog)?;
+
+            fs::create_dir_all("output")?;
+            write_executable(&exec, &default_output)?;
+
+            println!(">>> Assembled built-in program → {}", &default_output);
+        }
+
+        2 | 3 => {
+            // 1 or 2 arguments -> read file, optional output path
+            let input_path = &args[1];
+            let output_path = if args.len() == 3 {
+                &args[2]
+            } else {
+                &default_output
+            };
+
+            println!(">>> Reading program from {}...", input_path);
+
+            // Read .x86 or .s input file (as plain text)
+            let src = fs::read_to_string(input_path)?;
+            let prog = parser::parse_program(&src)?;
+
+            println!(">>> Assembling...");
+            let exec = assemble(&prog)?;
+            fs::create_dir_all(Path::new(output_path).parent().unwrap())?;
+            write_executable(&exec, output_path)?;
+
+            println!(">>> Output written to {}", output_path);
+        }
+
+        _ => {
+            eprintln!("Usage:");
+            eprintln!("  cargo run                  # run built-in test");
+            eprintln!("  cargo run -- input.x86     # assemble from file");
+            eprintln!("  cargo run -- input.x86 output/exec.out");
+        }
+    }
+
+    Ok(())
 }
 
+/// ASSEMBLER UNIT TESTS
+/// run with 'cargo test' (does not run with main)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use x86::asm::*;
-    use x86::*;
 
     #[test]
     fn test_simple_program() {
@@ -247,10 +296,7 @@ mod tests {
             vec![
                 Ins {
                     opcode: Opcode::Movq,
-                    operands: vec![
-                        Operand::Imm(Imm::Lit(42)),
-                        Operand::Reg(Reg::Rax),
-                    ],
+                    operands: vec![Operand::Imm(Imm::Lit(42)), Operand::Reg(Reg::Rax)],
                 },
                 Ins {
                     opcode: Opcode::Retq,
@@ -300,25 +346,16 @@ mod tests {
         //   movq $0, %rax
         //   retq
 
-        let hello_data = data(
-            "hello",
-            vec![Data::Asciz("Hi".to_string())],
-        );
+        let hello_data = data("hello", vec![Data::Asciz("Hi".to_string())]);
 
-        let num_data = data(
-            "num",
-            vec![Data::Quad(Imm::Lit(100))],
-        );
+        let num_data = data("num", vec![Data::Quad(Imm::Lit(100))]);
 
         let main_func = gtext(
             "main",
             vec![
                 Ins {
                     opcode: Opcode::Movq,
-                    operands: vec![
-                        Operand::Imm(Imm::Lit(0)),
-                        Operand::Reg(Reg::Rax),
-                    ],
+                    operands: vec![Operand::Imm(Imm::Lit(0)), Operand::Reg(Reg::Rax)],
                 },
                 Ins {
                     opcode: Opcode::Retq,

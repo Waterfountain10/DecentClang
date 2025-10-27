@@ -57,10 +57,7 @@ Temporary Items
 # ==========================================
 # Test artifacts
 # ==========================================
-/tests/output/
-/tests/tmp/
-/tests/build/
-/tests/target/
+/tests/*
 
 # ==========================================
 # LLVM / Clang / C build cache

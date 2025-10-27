@@ -3,6 +3,8 @@
 use std::{collections::HashMap, fmt, iter::Map};
 use x86::*;
 
+pub mod parser;
+
 pub enum SByte {
     InsB0(Ins), // 1st byte of ins
     InsFrag,    // 2nd - 8th bytes of ins
@@ -149,4 +151,26 @@ pub fn data_block_size(data_list: &[Data]) -> i64 {
             Data::Quad(_) => 8,
         })
         .sum()
+}
+
+/// Helper: resolve an immediate (Lbl -> Lit with address)
+pub fn resolve_imm(map: &HashMap<String, i64>, imm: &Imm) -> Result<Imm, UndefinedSym> {
+    match imm {
+        Imm::Lit(addr) => Ok(Imm::Lit(*addr)),
+        Imm::Lbl(lbl) => {
+            let addr = resolve_sym(lbl, map)?;
+            Ok(Imm::Lit(addr))
+        }
+    }
+}
+
+/// Helper: resolve an operand (recursively resolves labels)
+pub fn resolve_operand(map: &HashMap<String, i64>, op: &Operand) -> Result<Operand, UndefinedSym> {
+    match op {
+        Operand::Imm(i) => Ok(Operand::Imm(resolve_imm(map, i)?)),
+        Operand::Reg(r) => Ok(Operand::Reg(*r)),
+        Operand::Ind1(i) => Ok(Operand::Ind1(resolve_imm(map, i)?)),
+        Operand::Ind2(r) => Ok(Operand::Ind2(*r)),
+        Operand::Ind3(i, r) => Ok(Operand::Ind3(resolve_imm(map, i)?, *r)),
+    }
 }
