@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-frontend = { path = "../frontend" }
+llvm = { path = "../llvm" }
 x86  = { path = "../x86" }
