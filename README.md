@@ -6,13 +6,14 @@
 [![Origin: NUS CS4212](https://img.shields.io/badge/Origin-NUS_CS4212-purple?logo=academia)](https://ilyasergey.net/CS4212/)
 
 
-> Clang, but decently built in **Rust**.
-> 
+
 > Originally coded in **OCaml** for my [CS4212](https://ilyasergey.net/CS4212/) assignments, now rewritten from scratch with a modular backend architecture and clean IR boundaries.
 
----
-
 ## Overview
+
+Clang, but decently built with **Rust**.
+
+---
 
 DecentClang is a small, modular compiler pipeline written in Rust — each stage (lexer → parser → frontend → backend → assembler) is a separate crate. This project rebuilds the same flow with a focus on type-safe systems code.
 
