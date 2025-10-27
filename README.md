@@ -18,22 +18,41 @@ DecentClang is a small, modular compiler pipeline written in Rust — each stage
 
 This started as a university course project, but now became my personal endeavor.
 
+### Project Structure
+
+```
+DecentClang/
+│
+├── lexer/         │ Tokenize Oat source code
+├── parser/        │ Construct AST from tokens
+├── oat/           │ Oat v1 language specification
+├── frontend/      │ AST → LLVMlite IR lowering
+├── llvm/          │ LLVMlite IR type and instruction defs
+├── backend/       │ LLVMlite → x86 IR code generation
+├── x86/           │ x86 virtual ISA + assembler-friendly ops
+├── assembler/     │ Symbol resolution, layout, executable writeout
+└── driver/        │ Compiler CLI entrypoint
 ```
 
-DecentClang/
-├── lexer/       # tokenize Oat source
-├── parser/      # parse into AST
-├── oat/         # Oat v1 language spec
-├── frontend/    # lower AST → LLVMlite IR
-├── llvm/        # LLVMlite IR types
-├── backend/     # LLVM IR → x86 lowering
-├── x86/         # x86 IR and assembler sugar
-├── assembler/   # symbol resolution + exec layout
-└── driver/      # CLI entrypoint
-
-````
-
 Each crate compiles independently, with no shared mutable state or unsafe code.  
+
+---
+
+### General Compilation Flow
+
+Oat (C-like)
+→ **Lexer**
+→ **Parser**
+→ Frontend (AST → LLVMlite)
+→ **LLVMlite IR**
+→ **Backend** (LLVMlite → x86 IR)
+→ **x86 IR**
+→ **Assembler** (symbols + layout)
+→ **Binary Executable**
+
+`**bold** = implemented and tested`
+
+---
 
 ## Build & Run
 
