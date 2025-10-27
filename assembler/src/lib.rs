@@ -3,7 +3,7 @@
 use std::{collections::HashMap, fmt, iter::Map};
 use x86::*;
 
-pub mod parser;
+pub mod asm_parser;
 
 pub enum SByte {
     InsB0(Ins), // 1st byte of ins

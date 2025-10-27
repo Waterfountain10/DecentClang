@@ -31,7 +31,9 @@
 //!   ↓  (assemble)
 //! Exec { entry, text, data }
 //!   ↓  (write_executable)
-//! ELF or flat binary `.out`
+//! ELF or flat binary `.bin` (this is not executable by OS)
+//!   ↓
+//!
 //! ```
 //!
 //! ---
@@ -257,7 +259,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Read .x86 or .s input file (as plain text)
             let src = fs::read_to_string(input_path)?;
-            let prog = parser::parse_program(&src)?;
+            let prog = asm_parser::parse_program(&src)?;
 
             println!(">>> Assembling...");
             let exec = assemble(&prog)?;
