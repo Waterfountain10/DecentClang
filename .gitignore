@@ -63,7 +63,7 @@ Temporary Items
 /tests/target/
 
 # ==========================================
-# LLVM / Clang / C build caches
+# LLVM / Clang / C build cache
 # ==========================================
 *.obj
 *.pch
