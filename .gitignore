@@ -1,0 +1,81 @@
+# ==========================================
+# Rust & Cargo build artifacts
+# ==========================================
+/target/
+**/target/
+
+# ==========================================
+# Generated binaries / intermediate files
+# ==========================================
+*.o
+*.rlib
+*.rmeta
+*.d
+*.so
+*.dll
+*.exe
+*.out
+*.a
+*.s
+*.bc
+*.ll
+*.bin
+
+# ==========================================
+# Temporary or output directories
+# ==========================================
+/build/
+/dist/
+/output/
+/tmp/
+/out/
+/logs/
+/exec/
+
+
+# ==========================================
+# Editor & OS junk
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+
+# ==========================================
+# Test artifacts
+# ==========================================
+/tests/output/
+/tests/tmp/
+/tests/build/
+/tests/target/
+
+# ==========================================
+# LLVM / Clang / C build caches
+# ==========================================
+*.obj
+*.pch
+*.mod
+*.dep
+*.map
+*.gcno
+*.gcda
+*.profraw
+*.profdata
+
+# ==========================================
+# Optional build-time data
+# ==========================================
+**/*.crate
