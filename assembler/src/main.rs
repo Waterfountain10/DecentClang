@@ -126,17 +126,11 @@ fn resolve_data_labels(map: &HashMap<String, i64>, data: &Data) -> Result<Data, 
 
 /// 4 - assemble(prog) — combines filter, build_sym, and resolve to produce Exec
 pub fn assemble(prog: &Prog) -> Result<Exec, Box<dyn std::error::Error>> {
-    // Step 1: Split into text and data sections
     let (ts, ds) = filter_sections(prog);
-
-    // Step 2: Build symbol table and get layout info
     let (map, text_size, data_pos, data_size) = build_symbol_table(&ts, &ds)?;
-
-    // Validate that 'main' exists
     let entry = resolve_sym("main", &map)?;
-    let text_pos = 0x400_000i64;
 
-    // Step 3: Resolve labels and flatten to sbytes
+    let text_pos = 0x400_000i64;
     let mut text_seg = Vec::new();
     for elem in &ts {
         if let Asm::Text(ins_list) = &elem.asm {
