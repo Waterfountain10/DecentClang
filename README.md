@@ -1,8 +1,14 @@
 # DecentClang
 
+[![Made with Rust](https://img.shields.io/badge/Rust-2024-orange?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Tests](https://img.shields.io/badge/tests-cargo%20test-success?logo=github&color=green)](https://doc.rust-lang.org/cargo/commands/cargo-test.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Origin: NUS CS4212](https://img.shields.io/badge/Origin-NUS_CS4212-purple?logo=academia)](https://ilyasergey.net/CS4212/)
+
+
 > Clang, but decently built in **Rust**.
 > 
-> Originally coded in **OCaml** for my [CS4212](https://nusmods.com/modules/CS4212/compiler-design) assignments, now rewritten from scratch with a modular backend architecture and clean IR boundaries.
+> Originally coded in **OCaml** for my [CS4212](https://ilyasergey.net/CS4212/) assignments, now rewritten from scratch with a modular backend architecture and clean IR boundaries.
 
 ---
 
