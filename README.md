@@ -7,6 +7,7 @@
 
 
 
+
 > Originally coded in **OCaml** for my [CS4212](https://ilyasergey.net/CS4212/) assignments, now rewritten from scratch with a modular backend architecture and clean IR boundaries.
 
 ## Overview
@@ -26,7 +27,6 @@ DecentClang/
 │
 ├── lexer/         │ Tokenize Oat source code
 ├── parser/        │ Construct AST from tokens
-├── oat/           │ Oat v1 language specification
 ├── frontend/      │ AST → LLVMlite IR lowering
 ├── llvm/          │ LLVMlite IR type and instruction defs
 ├── backend/       │ LLVMlite → x86 IR code generation
@@ -35,7 +35,7 @@ DecentClang/
 └── driver/        │ Compiler CLI entrypoint
 ```
 
-Each crate compiles independently, with no shared mutable state or unsafe code.  
+Each crate compiles independently, with no shared mutable state or unsafe code.
 
 ---
 

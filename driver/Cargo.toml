@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 backend = { path = "../backend" }
 frontend = { path = "../frontend" }
-oat      = { path = "../oat" }
+ast      = { path = "../ast" }

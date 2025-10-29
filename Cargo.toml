@@ -2,7 +2,7 @@
 members = [
     "lexer",
     "parser",
-    "oat",
+    "ast",
     "llvm",
     "x86",
     "frontend",

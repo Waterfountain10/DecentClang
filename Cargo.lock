@@ -10,6 +10,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ast"
+version = "0.1.0"
+
+[[package]]
 name = "backend"
 version = "0.1.0"
 dependencies = [
@@ -21,16 +25,16 @@ dependencies = [
 name = "driver"
 version = "0.1.0"
 dependencies = [
+ "ast",
  "backend",
  "frontend",
- "oat",
 ]
 
 [[package]]
 name = "frontend"
 version = "0.1.0"
 dependencies = [
- "oat",
+ "ast",
  "parser",
 ]
 
@@ -47,15 +51,11 @@ name = "llvm"
 version = "0.1.0"
 
 [[package]]
-name = "oat"
-version = "0.1.0"
-
-[[package]]
 name = "parser"
 version = "0.1.0"
 dependencies = [
+ "ast",
  "lexer",
- "oat",
 ]
 
 [[package]]
