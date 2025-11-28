@@ -1,6 +1,5 @@
-#! Abstract Syntax Tree for Oat (aka mini C language)
+#! Abstract Syntax Tree for Oat
 
-use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RangeTy {
@@ -16,29 +15,36 @@ pub struct Node<T> {
 
 pub type IdTy = String;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
-    Tbool,
+    TBool,
     TInt,
     TRef(RefTy),
+    TNullRef(RefTy), // TODO: did we want tnullref here or somehwer else??
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RefTy {
     RString,
     RArray(Box<Ty>),
     RFun(Vec<Ty>, RetTy),
+    RStruct(IdTy), // TODO: did we want structs here or somehwer else??
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RetTy {
     RetVoid,
     RetVal(Box<Ty>),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnOp {
     Neg,
     LogNot,
     BitNot,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinOp {
     Add,
     Sub,
@@ -58,6 +64,7 @@ pub enum BinOp {
     Sar,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Exp {
     CNull(RefTy),
     CBool(bool),
@@ -121,9 +128,15 @@ pub struct Field {
     pub field_type: Ty,
 }
 
+pub struct TDecl {
+    pub td_id: IdTy,
+    pub td_node: Vec<Field>,
+}
+
 pub enum Decl {
-    GvDecl(Node<GDecl>),
-    GfDecl(Node<FDecl>),
+    GVDecl(Node<GDecl>),
+    GFDecl(Node<FDecl>),
+    GTDecl(Node<TDecl>),
 }
 
 pub type Prog = Vec<Decl>;

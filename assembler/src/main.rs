@@ -127,7 +127,7 @@ fn resolve_data_labels(map: &HashMap<String, i64>, data: &Data) -> Result<Data, 
 /// 4 - assemble(prog) — combines filter, build_sym, and resolve to produce Exec
 pub fn assemble(prog: &Prog) -> Result<Exec, Box<dyn std::error::Error>> {
     let (ts, ds) = filter_sections(prog);
-    let (map, text_size, data_pos, data_size) = build_symbol_table(&ts, &ds)?;
+    let (map, _text_size, data_pos, _data_size) = build_symbol_table(&ts, &ds)?;
     let entry = resolve_sym("main", &map)?;
 
     let text_pos = 0x400_000i64;
@@ -312,7 +312,7 @@ mod tests {
         // Test build_symbol_table
         let result = build_symbol_table(&ts, &ds);
         assert!(result.is_ok());
-        let (sym_map, text_size, data_pos, data_size) = result.unwrap();
+        let (sym_map, text_size, _data_pos, data_size) = result.unwrap();
 
         assert_eq!(text_size, 16); // 2 instructions * 8 bytes
         assert_eq!(data_size, 0);
@@ -370,7 +370,7 @@ mod tests {
         // Test build_symbol_table
         let result = build_symbol_table(&ts, &ds);
         assert!(result.is_ok());
-        let (sym_map, text_size, data_pos, data_size) = result.unwrap();
+        let (sym_map, text_size, _data_pos, data_size) = result.unwrap();
 
         assert_eq!(text_size, 16); // 2 instructions * 8 bytes
         assert_eq!(data_size, 11); // "Hi\0" (3 bytes) + quad (8 bytes)
@@ -420,7 +420,8 @@ mod tests {
 
     #[test]
     fn test_undefined_symbol_error() {
-        // Test that undefined symbols are caught
+        // Test that undefined symbols are caught. Ex:
+        //
         // main:
         //   jmp undefined_label
 

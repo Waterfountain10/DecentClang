@@ -1,6 +1,6 @@
 //! Core assembler utilities (human-readable asm -> byte level representation)
 
-use std::{collections::HashMap, fmt, iter::Map};
+use std::collections::HashMap;
 use x86::*;
 
 pub mod asm_parser;

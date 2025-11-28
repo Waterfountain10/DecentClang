@@ -1,4 +1,4 @@
-//! llvm ir → x86 compiler backend
+#! Backend Layer : llvm → x86
 //!
 //! translates llvm ir (from llvm crate) into x86 assembly (x86 crate)
 //! output can be fed directly into assembler which produces exec

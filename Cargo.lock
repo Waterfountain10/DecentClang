@@ -59,5 +59,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "typechecker"
+version = "0.1.0"
+dependencies = [
+ "ast",
+]
+
+[[package]]
 name = "x86"
 version = "0.1.0"
