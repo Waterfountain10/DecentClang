@@ -1,4 +1,4 @@
-//! Core assembler utilities (human-readable asm -> byte level representation)
+//! Core assembler structs and helpers (i.e human-readable asm -> byte level representation)
 
 use std::collections::HashMap;
 use x86::*;

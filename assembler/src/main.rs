@@ -10,11 +10,12 @@
 //!                1 - `filter_sections(prog: &Prog)` — pure, returns separate text/data sections.
 //!                2 - `build_symbol_table(text, data)` — constructs a `HashMap<String, u64>` of label → address.
 //!                3 - `resolve_labels(prog, symtab)` — replaces symbolic labels with concrete immediates.
-//!                4 - `assemble(prog)` — combines the above to produce a binary representation (`Exec`).
-//!                5 - `write_executable(exec)` — (new) writes an ELF or flat binary file to disk.
+//!                4 - `assemble(prog)` — combines the above to produce a binary representation (i.e `Exec` in Rust).
+//!                5 - `write_executable(Exec e)` — (new) writes an ELF or flat binary file to disk.
 //!
 //! The final *loader/simulator* step is **omitted** — because our goal is to
 //! emit a true executable file that your OS can run (not to emulate a CPU).
+//! * the line above only makes sense to people who have done cs4212, otherwise just ignore *
 //!
 //! ---
 //!
@@ -203,8 +204,8 @@ pub fn write_executable(exec: &Exec, path: &str) -> std::io::Result<()> {
 
 /// BINARY ENTRY -- this is where you generate the exec.out file in output/
 /// `cargo run` :                               uses the built in small test placeholder (result is 42)
-/// `cargo run -- input.x86` :                  reads prog from input.x86 -> output/exec.out
-/// `cargo run -- input.x86 output/myprog.out`  reads prof from input.x86 -> output/myprog.out
+/// `cargo run -- input.s` :                  reads prog from input.s -> output/exec.out
+/// `cargo run -- input.s output/myprog.out`  reads prof from input.s -> output/myprog.out
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
@@ -251,7 +252,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             println!(">>> Reading program from {}...", input_path);
 
-            // Read .x86 or .s input file (as plain text)
+            // Read .s or .s input file (as plain text)
             let src = fs::read_to_string(input_path)?;
             let prog = asm_parser::parse_program(&src)?;
 
@@ -266,8 +267,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {
             eprintln!("Usage:");
             eprintln!("  cargo run                  # run built-in test");
-            eprintln!("  cargo run -- input.x86     # assemble from file");
-            eprintln!("  cargo run -- input.x86 output/exec.out");
+            eprintln!("  cargo run -- input.s     # assemble from file");
+            eprintln!("  cargo run -- input.s output/exec.out");
         }
     }
 

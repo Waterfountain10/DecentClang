@@ -1,8 +1,6 @@
-use std::error::Error;
-use x86::asm::*;
-use x86::*;
+//! Assembly parsing helpers (.asm text -> x86::Prog/Reg/Ins/etc...)
 
-/// Parse a `.x86` text file into an internal `Prog`
+/// Parse a `.s` text file into an internal `Prog`
 ///
 /// Supports:
 /// ```asm
@@ -15,6 +13,10 @@ use x86::*;
 /// msg: .asciz "Hello"
 /// num: .quad 99
 /// ```
+use std::error::Error;
+use x86::asm::*;
+use x86::*;
+
 pub fn parse_program(src: &str) -> Result<Prog, Box<dyn Error>> {
     let mut elems = Vec::new();
     let mut section = String::from(".text");
