@@ -12,8 +12,8 @@ softwareupdate --install-rosetta --agree-to-license
 
 and compile as such :
 ```bash
-clang -arch x86_64 assembler/tests/hello.s -o assembler/output/prog
-arch -x86_64 ./prog
+clang -arch x86_64 assembler/tests/hello.s -o assembler/output/hello
+arch -x86_64 ./assembler/output.hello
 ```
 
 else if you want to fork and write ARM64, then it might look like this :
