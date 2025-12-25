@@ -12,7 +12,7 @@ softwareupdate --install-rosetta --agree-to-license
 
 and compile as such :
 ```bash 
-clang -arch x86_64 assembler/tests/hello.s -o assembler/output/hello_test
+clang -arch x86_64 assembler/tests/hello_x86.s -o assembler/output/hello_x86
 arch -x86_64 ./assembler/output/hello_test
 ```
 
