@@ -55,20 +55,16 @@ use typechecker::*;
 //  Decides whether H |- t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype(h: TypeCtxt, t1: Ty, t2: Ty) -> bool {
+fn subtype(h: &TypeCtxt, t1: &Ty, t2: &Ty) -> bool {
     match (t1, t2) {
         (TInt, TInt) => true,
 
         (TBool, TBool) => true,
 
         (TNullRef(rty1), TNullRef(rty2))
-        | (TRef(rty1), TNullRef(rty2)) // ref <= nullref is one-sided
-        | (TRef(rty1), TRef(rty2)) => subtype_ref(h, rty1, rty2),
-
-        // TODO:
-        // ENSURE MUTUAL RECURSION BEST PRACTICES
-        // between subtype <-> ref_subtype
-        //
+        | (TRef(rty1), TNullRef(rty2))
+        | (TRef(rty1), TRef(rty2))
+        | (TNullRef(rty1), TRef(rty2)) => subtype_ref(h, rty1, rty2),
 
         (_, _) => false, // incorrect subtyping
     }
@@ -78,18 +74,18 @@ fn subtype(h: TypeCtxt, t1: Ty, t2: Ty) -> bool {
 //  Decides whether H |-ref t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype_ref(h: TypeCtxt, t1: RefTy, t2: RefTy) -> bool {
+fn subtype_ref(h: &TypeCtxt, t1: &RefTy, t2: &RefTy) -> bool {
     match (t1, t2) {
         (RString, RString) => true,
 
-        (RArray(elt_t1), RArray(elt_t2)) => elt_t1.type_id().eq(&elt_t2.type_id()), // check type equalities for elts
+        (RArray(elt_t1), RArray(elt_t2)) => elt_t1 == elt_t2, // check type equalities for elts
+
+        // RFun : (Vec<Ty>, RetTy)
+        (RFun(args1, out1), RFun(args2, out2)) => {
+            subtype_list(h, args1.as_slice(), args2.as_slice()) && subtype_ret(h, out1, out2)
+        }
 
         (RStruct(id1), RStruct(id2)) => {
-            eprintln!("not implemented yet!");
-            false
-        }
-        // Vec<Ty>, RetTy
-        (RFun(args1, out1), RFun(args2, out2)) => {
             eprintln!("not implemented yet!");
             false
         }
@@ -97,6 +93,28 @@ fn subtype_ref(h: TypeCtxt, t1: RefTy, t2: RefTy) -> bool {
         (_, _) => false,
     }
 }
+
+fn subtype_ret(h: &TypeCtxt, t1: &RetTy, t2: &RetTy) -> bool {
+    print!("not implemented yet");
+    return false;
+}
+
+// helper for subtyping list like arguments in functions
+// ex : [a1,a2,a3] and [b1,b2,b3]
+fn subtype_list(h: &TypeCtxt, l1: &[Ty], l2: &[Ty]) -> bool {
+    if l1.len() != l2.len() {
+        return false;
+    }
+
+    l1.iter().zip(l2.iter()).all(|(t1, t2)| subtype(&h, t1, t2))
+}
+
+// pub fn int64_of_sbytes(bs: &Vec<SByte>) -> i64 {
+//     bs.iter().rev().fold(0i64, |acc, b| match b {
+//         SByte::Byte(c) => (acc << 8) | (*c as u8 as i64), // shifted acc becomes last 2 digits, and c is the highest ones
+//         _ => 0i64,                                        // start with acc = 0
+// }
+//     })
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("not implemented yet");
