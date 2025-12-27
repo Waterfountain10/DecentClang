@@ -1,6 +1,7 @@
 #! Typechecker helpers & Context-related definitions
 
 use ast;
+use ast::IdTy;
 use common::Span;
 use common::TypeError;
 use common::TypeErrorKind;
@@ -19,6 +20,12 @@ pub struct TypeCtxt {
     functions: FunCtxt,
     structs: StructCtxt,
 }
+
+// pub fn lookup_field(struc_name: IdTy, f_name: IdTy, tc: TypeCtxt) {
+//     match (lookup_field_option (struc_name, f_name, tc)) {
+//         None =>
+//     }
+// }
 
 // Typechecker utilitites
 pub type TcResult<T> = Result<T, TypeError>;
