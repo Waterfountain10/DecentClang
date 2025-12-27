@@ -27,9 +27,11 @@
 //!
 
 use ast::RefTy::*;
+use ast::RetTy::*;
 use ast::Ty::*;
 use ast::*;
 use std::any::Any;
+use std::boxed;
 use std::cell::Ref;
 use typechecker::*;
 
@@ -78,7 +80,7 @@ fn subtype_ref(h: &TypeCtxt, t1: &RefTy, t2: &RefTy) -> bool {
     match (t1, t2) {
         (RString, RString) => true,
 
-        (RArray(elt_t1), RArray(elt_t2)) => elt_t1 == elt_t2, // check type equalities for elts
+        (RArray(elt_t1), RArray(elt_t2)) => elt_t1.as_ref() == elt_t2.as_ref(), // check type equalities for elts
 
         // RFun : (Vec<Ty>, RetTy)
         (RFun(args1, out1), RFun(args2, out2)) => {
@@ -86,17 +88,25 @@ fn subtype_ref(h: &TypeCtxt, t1: &RefTy, t2: &RefTy) -> bool {
         }
 
         (RStruct(id1), RStruct(id2)) => {
-            eprintln!("not implemented yet!");
-            false
+            id1 == id2 || subtype_fields(h, id1.to_string(), id2.to_string())
         }
 
         (_, _) => false,
     }
 }
 
+// return subtyping ---------------------------------------------------------------- *)
+//  Decides whether H |-ret t1 <: t2
+//     - assumes that H contains the declarations of all the possible struct types
+//
 fn subtype_ret(h: &TypeCtxt, t1: &RetTy, t2: &RetTy) -> bool {
-    print!("not implemented yet");
-    return false;
+    match (t1, t2) {
+        (RetVoid, RetVoid) => true,
+
+        (RetVal(v1), RetVal(v2)) => subtype(h, v1.as_ref(), v2.as_ref()),
+
+        _ => false,
+    }
 }
 
 // helper for subtyping list like arguments in functions
@@ -109,12 +119,11 @@ fn subtype_list(h: &TypeCtxt, l1: &[Ty], l2: &[Ty]) -> bool {
     l1.iter().zip(l2.iter()).all(|(t1, t2)| subtype(&h, t1, t2))
 }
 
-// pub fn int64_of_sbytes(bs: &Vec<SByte>) -> i64 {
-//     bs.iter().rev().fold(0i64, |acc, b| match b {
-//         SByte::Byte(c) => (acc << 8) | (*c as u8 as i64), // shifted acc becomes last 2 digits, and c is the highest ones
-//         _ => 0i64,                                        // start with acc = 0
-// }
-//     })
+// fields n1 are a subtype of n2 if n2 is a prefix of n1
+fn subtype_fields(h: &TypeCtxt, n1: IdTy, n2: IdTy) -> bool {
+    print!("not implemented yet.");
+    return false;
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("not implemented yet");
