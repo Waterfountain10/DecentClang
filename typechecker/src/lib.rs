@@ -69,7 +69,7 @@ impl TypeCtxt {
         self.globals.get(id)
     }
 
-    // local-or-global like your OCaml `lookup_option`
+    // general lookup for : local? global
     pub fn lookup_var_option(&self, id: &str) -> Option<&Ty> {
         self.lookup_local_option(id)
             .or_else(|| self.lookup_global_option(id))

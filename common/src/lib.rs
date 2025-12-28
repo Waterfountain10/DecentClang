@@ -36,23 +36,23 @@ impl TypeError {
     }
 }
 
-// NAME ERRORS
-#[derive(Debug, Clone)]
-pub enum NameErrorKind {
-    StructFieldNotFound { st_name: String, f_name: String },
-    UnknownIdentifier { name: String },
-    // we can add more error kinds later
-}
+// // NAME ERRORS
+// #[derive(Debug, Clone)]
+// pub enum NameErrorKind {
+//     StructFieldNotFound { st_name: String, f_name: String },
+//     UnknownIdentifier { name: String },
+//     // we can add more error kinds later
+// }
 
-#[derive(Debug, Clone)]
-pub struct NameError {
-    pub msg: String,
-    pub span: Span,
-    pub kind: NameErrorKind,
-}
+// #[derive(Debug, Clone)]
+// pub struct NameError {
+//     pub msg: String,
+//     pub span: Span,
+//     pub kind: NameErrorKind,
+// }
 
-impl NameError {
-    pub fn new(msg: String, span: Span, kind: NameErrorKind) -> Self {
-        Self { msg, span, kind }
-    }
-}
+// impl NameError {
+//     pub fn new(msg: String, span: Span, kind: NameErrorKind) -> Self {
+//         Self { msg, span, kind }
+//     }
+// }

@@ -84,7 +84,7 @@ fn subtype_ref(h: &TypeCtxt, t1: &RefTy, t2: &RefTy) -> bool {
 
         // RFun : (Vec<Ty>, RetTy)
         (RFun(args1, out1), RFun(args2, out2)) => {
-            subtype_list(h, args1.as_slice(), args2.as_slice()) && subtype_ret(h, out1, out2)
+            subtype_list(h, args2.as_slice(), args1.as_slice()) && subtype_ret(h, out1, out2)
         }
 
         (RStruct(id1), RStruct(id2)) => {
@@ -116,7 +116,7 @@ fn subtype_list(h: &TypeCtxt, l1: &[Ty], l2: &[Ty]) -> bool {
         return false;
     }
 
-    l1.iter().zip(l2.iter()).all(|(t1, t2)| subtype(&h, t1, t2))
+    l1.iter().zip(l2.iter()).all(|(t1, t2)| subtype(h, t1, t2))
 }
 
 // fields n1 are a subtype of n2 if n2 is a prefix of n1
@@ -135,8 +135,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 // used for:
 // CArr,
 // NewArrInit : int[] myArray = [1,2,3]
-let typecheck_ty () -> TcR{
-    match (t)
+fn typecheck_ty(h: TypeCtxt, t: Ty) -> TcResult<Ty> {
+    match (t) {}
 }
 
 fn typecheck_exp(env: &Env, e: &Exp) -> TcResult<Ty> {
@@ -145,23 +145,19 @@ fn typecheck_exp(env: &Env, e: &Exp) -> TcResult<Ty> {
 
         Exp::Bool(_, _) => Ok(Ty::TBool),
 
-        Exp::Var(span, x) => {
-            env.lookup(x)
-               .cloned()
-               .ok_or_else(|| type_error(*span, format!("unbound variable `{}`", x)))
-        }
+        Exp::Var(span, x) => env
+            .lookup(x)
+            .cloned()
+            .ok_or_else(|| type_error(*span, format!("unbound variable `{}`", x))),
 
         Exp::Add(span, e1, e2) => {
-            let t1 = typecheck_exp(env, e1)?;  // ← HERE
-            let t2 = typecheck_exp(env, e2)?;  // ← HERE
+            let t1 = typecheck_exp(env, e1)?; // ← HERE
+            let t2 = typecheck_exp(env, e2)?; // ← HERE
 
             if t1 == Ty::TInt && t2 == Ty::TInt {
                 Ok(Ty::TInt)
             } else {
-                Err(type_error(
-                    *span,
-                    "both operands of + must be int",
-                ))
+                Err(type_error(*span, "both operands of + must be int"))
             }
         }
     }
