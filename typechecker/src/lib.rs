@@ -1,19 +1,22 @@
 #! Typechecker helpers & Context-related definitions
 
-use ast;
-use ast::IdTy;
+use std::collections::HashMap;
+
+use ast::*;
 use common::Span;
 use common::TypeError;
 use common::TypeErrorKind;
 
 // Context Defintions
-pub type FunTy = Vec<(ast::Ty, ast::RetTy)>;
+pub type FunTy = Vec<(Ty, RetTy)>;
 
-type LocalCtxt = Vec<(ast::IdTy, ast::Ty)>;
-type GlobalCtxt = Vec<(ast::IdTy, ast::Ty)>;
-type FunCtxt = Vec<(ast::IdTy, FunTy)>;
-type StructCtxt = Vec<(ast::IdTy, Vec<ast::Field>)>;
+type LocalCtxt = Vec<HashMap<IdTy, Ty>>;
 
+type GlobalCtxt = HashMap<IdTy, Ty>;
+type FunCtxt = HashMap<IdTy, FunTy>;
+type StructCtxt = HashMap<IdTy, Vec<Field>>;
+
+#[derive(Debug, Clone)]
 pub struct TypeCtxt {
     locals: LocalCtxt,
     globals: GlobalCtxt,

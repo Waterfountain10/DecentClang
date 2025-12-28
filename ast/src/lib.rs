@@ -79,16 +79,19 @@ pub enum Exp {
     Uop(UnOp, Box<Node<Exp>>),
 }
 
+#[derive(Debug, Clone)]
 pub struct CField {
     pub cf_id: IdTy,
     pub cf_node: Node<Exp>,
 }
 
+#[derive(Debug, Clone)]
 pub struct VDecl {
     pub vd_id: IdTy,
     pub vd_node: Node<Exp>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Assn(Node<Exp>, Node<Exp>),
     Decl(VDecl),
@@ -106,16 +109,19 @@ pub enum Stmt {
 
 pub type Block = Vec<Node<Stmt>>;
 
+#[derive(Debug, Clone)]
 pub struct GDecl {
     pub name: IdTy,
     pub init: Node<Exp>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Arg {
     pub ty: Ty,
     pub id: IdTy,
 }
 
+#[derive(Debug, Clone)]
 pub struct FDecl {
     pub fret_ty: RetTy,
     pub fname: IdTy,
@@ -123,16 +129,19 @@ pub struct FDecl {
     pub body: Block,
 }
 
+#[derive(Debug, Clone)]
 pub struct Field {
     pub field_name: IdTy,
     pub field_type: Ty,
 }
 
+#[derive(Debug, Clone)]
 pub struct TDecl {
     pub td_id: IdTy,
     pub td_node: Vec<Field>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Decl {
     GVDecl(Node<GDecl>),
     GFDecl(Node<FDecl>),

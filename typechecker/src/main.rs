@@ -129,3 +129,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     eprintln!("not implemented yet");
     Ok(())
 }
+
+// TYPECHECKING (a.k.a TYPE INFERENCE RULES)
+
+// used for:
+// CArr,
+// NewArrInit : int[] myArray = [1,2,3]
+let typecheck_ty () -> TcR{
+    match (t)
+}
+
+fn typecheck_exp(env: &Env, e: &Exp) -> TcResult<Ty> {
+    match e {
+        Exp::Int(_, _) => Ok(Ty::TInt),
+
+        Exp::Bool(_, _) => Ok(Ty::TBool),
+
+        Exp::Var(span, x) => {
+            env.lookup(x)
+               .cloned()
+               .ok_or_else(|| type_error(*span, format!("unbound variable `{}`", x)))
+        }
+
+        Exp::Add(span, e1, e2) => {
+            let t1 = typecheck_exp(env, e1)?;  // ← HERE
+            let t2 = typecheck_exp(env, e2)?;  // ← HERE
+
+            if t1 == Ty::TInt && t2 == Ty::TInt {
+                Ok(Ty::TInt)
+            } else {
+                Err(type_error(
+                    *span,
+                    "both operands of + must be int",
+                ))
+            }
+        }
+    }
+}
