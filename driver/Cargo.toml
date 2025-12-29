@@ -7,3 +7,7 @@ edition = "2024"
 backend = { path = "../backend" }
 frontend = { path = "../frontend" }
 ast      = { path = "../ast" }
+
+[[bin]]
+name = "dclang"
+path = "src/main.rs"
