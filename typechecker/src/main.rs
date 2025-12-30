@@ -26,6 +26,8 @@
 //! ```
 //!
 
+use std::fmt::Debug;
+
 use ast::RefTy;
 use ast::RetTy;
 use ast::Ty;
@@ -176,16 +178,35 @@ fn typecheck_ref(h: TypeCtxt, r: ast::RefTy, mut null: &bool) -> TcResult<ast::R
                 Ok(RefTy::RStruct(id))
             }
         }
-        RefTy::RArray(b) => match typecheck_ty(h, b.as_ref().into(), null*) {
+
+        RefTy::RArray(b) => match typecheck_ty(h, *(b.as_ref()), *null) {
             Ok(t) => Ok(RefTy::RArray(Box::new(t))),
-            Err(te) => Err(te)
+            Err(te) => Err(te),
+        },
+
+        RefTy::RFun(tlist, ret_box) => {
+            typecheck_ret(h, ret_box.into());
+            if tlist.iter().all(|t| typecheck_ty(h, *t, *null).is_ok()) {
+                Ok(RefTy::RFun((tlist), (ret)))
+            } else {
+                Err(type_error(
+                    format!(
+                        "Mismatch in RFun type for inputs {:?} and output {:?}",
+                        tlist,
+                        ret.
+                    ),
+                    Span::dummy(),
+                    TypeErrorKind::Mismatch {
+                        expected: format!("{:?} -> {:?}", tlist, ret),
+                        found: format!("{:?}", r),
+                    },
+                ))
             }
         }
-
-
-        RefTy::RFun(_, _) => (),
     }
 }
+
+fn typecheck_ret(h: TypeCtxt, ret: RetTy) -> TcResult<ast::RetTy> {}
 
 fn typecheck_exp(env: &Env, e: &Exp) -> TcResult<Ty> {
     match e {

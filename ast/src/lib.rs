@@ -27,8 +27,15 @@ pub enum Ty {
 pub enum RefTy {
     RString,
     RArray(Box<Ty>),
-    RFun(Vec<Ty>, RetTy),
+    RFun(Vec<Ty>, Box<RetTy>),
     RStruct(IdTy), // TODO: did we want structs here or somehwer else??
+}
+
+trait IntoRefTy {}
+
+trait Zero {
+    const ZERO: Self;
+    fn is_zero(&self) -> bool;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
