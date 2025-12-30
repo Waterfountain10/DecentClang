@@ -26,13 +26,13 @@
 //! ```
 //!
 
-use ast::RefTy::*;
-use ast::RetTy::*;
-use ast::Ty::*;
-use ast::*;
-use std::any::Any;
-use std::boxed;
-use std::cell::Ref;
+use ast::RefTy;
+use ast::RetTy;
+use ast::Ty;
+
+use ::common::TypeErrorKind;
+use common::Span;
+use common::TypeError;
 use typechecker::*;
 
 // fn typecheck_program(p: ast::Prog) -> Result<(), ()> {
@@ -57,16 +57,16 @@ use typechecker::*;
 //  Decides whether H |- t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype(h: &TypeCtxt, t1: &Ty, t2: &Ty) -> bool {
+fn subtype(h: &TypeCtxt, t1: &ast::Ty, t2: &ast::Ty) -> bool {
     match (t1, t2) {
-        (TInt, TInt) => true,
+        (Ty::TInt, Ty::TInt) => true,
 
-        (TBool, TBool) => true,
+        (Ty::TBool, Ty::TBool) => true,
 
-        (TNullRef(rty1), TNullRef(rty2))
-        | (TRef(rty1), TNullRef(rty2))
-        | (TRef(rty1), TRef(rty2))
-        | (TNullRef(rty1), TRef(rty2)) => subtype_ref(h, rty1, rty2),
+        (Ty::TNullRef(rty1), Ty::TNullRef(rty2))
+        | (Ty::TRef(rty1), Ty::TNullRef(rty2))
+        | (Ty::TRef(rty1), Ty::TRef(rty2))
+        | (Ty::TNullRef(rty1), Ty::TRef(rty2)) => subtype_ref(h, rty1, rty2),
 
         (_, _) => false, // incorrect subtyping
     }
@@ -76,18 +76,17 @@ fn subtype(h: &TypeCtxt, t1: &Ty, t2: &Ty) -> bool {
 //  Decides whether H |-ref t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype_ref(h: &TypeCtxt, t1: &RefTy, t2: &RefTy) -> bool {
+fn subtype_ref(h: &TypeCtxt, t1: &ast::RefTy, t2: &ast::RefTy) -> bool {
     match (t1, t2) {
-        (RString, RString) => true,
+        (RefTy::RString, RefTy::RString) => true,
 
-        (RArray(elt_t1), RArray(elt_t2)) => elt_t1.as_ref() == elt_t2.as_ref(), // check type equalities for elts
+        (RefTy::RArray(elt_t1), RefTy::RArray(elt_t2)) => elt_t1.as_ref() == elt_t2.as_ref(), // check type equalities for elts
 
-        // RFun : (Vec<Ty>, RetTy)
-        (RFun(args1, out1), RFun(args2, out2)) => {
+        (RefTy::RFun(args1, out1), RefTy::RFun(args2, out2)) => {
             subtype_list(h, args2.as_slice(), args1.as_slice()) && subtype_ret(h, out1, out2)
         }
 
-        (RStruct(id1), RStruct(id2)) => {
+        (RefTy::RStruct(id1), RefTy::RStruct(id2)) => {
             id1 == id2 || subtype_fields(h, id1.to_string(), id2.to_string())
         }
 
@@ -99,11 +98,11 @@ fn subtype_ref(h: &TypeCtxt, t1: &RefTy, t2: &RefTy) -> bool {
 //  Decides whether H |-ret t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype_ret(h: &TypeCtxt, t1: &RetTy, t2: &RetTy) -> bool {
+fn subtype_ret(h: &TypeCtxt, t1: &ast::RetTy, t2: &ast::RetTy) -> bool {
     match (t1, t2) {
-        (RetVoid, RetVoid) => true,
+        (RetTy::RetVoid, RetTy::RetVoid) => true,
 
-        (RetVal(v1), RetVal(v2)) => subtype(h, v1.as_ref(), v2.as_ref()),
+        (RetTy::RetVal(v1), RetTy::RetVal(v2)) => subtype(h, v1.as_ref(), v2.as_ref()),
 
         _ => false,
     }
@@ -111,7 +110,7 @@ fn subtype_ret(h: &TypeCtxt, t1: &RetTy, t2: &RetTy) -> bool {
 
 // helper for subtyping list like arguments in functions
 // ex : [a1,a2,a3] and [b1,b2,b3]
-fn subtype_list(h: &TypeCtxt, l1: &[Ty], l2: &[Ty]) -> bool {
+fn subtype_list(h: &TypeCtxt, l1: &[ast::Ty], l2: &[ast::Ty]) -> bool {
     if l1.len() != l2.len() {
         return false;
     }
@@ -123,7 +122,7 @@ fn subtype_list(h: &TypeCtxt, l1: &[Ty], l2: &[Ty]) -> bool {
 // fields(n2) is a prefix of fields(n1)
 //
 // ex: s1.a <= s2.a,
-fn subtype_fields(h: &TypeCtxt, n1: IdTy, n2: IdTy) -> bool {
+fn subtype_fields(h: &TypeCtxt, n1: ast::IdTy, n2: ast::IdTy) -> bool {
     return false;
 }
 
@@ -143,13 +142,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 // NewArrInit : int[] a = [1, 2, 3]; => tc the TYPE int again
 //
 // not NewArr : int[] a = new int[10]; => tc also, but different because init. arrays dont support TRef types
-fn typecheck_ty(h: TypeCtxt, t: Ty) -> TcResult<Ty> {
+fn typecheck_ty(h: TypeCtxt, t: ast::Ty, null: bool) -> TcResult<ast::Ty> {
     match t {
-        Ty::TBool => Ok(TBool),
+        Ty::TBool => Ok(Ty::TBool),
 
-        Ty::TInt => Ok(TInt),
+        Ty::TInt => Ok(Ty::TInt),
 
-        Ty::TRef(r) | Ty::TNullRef(r) => typecheck_ref(h, r),
+        Ty::TRef(r) | Ty::TNullRef(r) => match typecheck_ref(h, r, &null) {
+            Ok(rt) => {
+                if null == true {
+                    Ok(Ty::TNullRef(rt))
+                } else {
+                    Ok(Ty::TRef(rt))
+                }
+            }
+            Err(te) => Err(te), // typecheck_ref handles the Err format already
+        },
+    }
+}
+
+fn typecheck_ref(h: TypeCtxt, r: ast::RefTy, mut null: &bool) -> TcResult<ast::RefTy> {
+    match r {
+        RefTy::RString => Ok(RefTy::RString),
+
+        RefTy::RStruct(id) => {
+            if h.lookup_struct_option(id.as_str()).is_none() {
+                Err(type_error(
+                    format!("Unbound struct type for {}", id),
+                    Span::dummy(),
+                    TypeErrorKind::UnknownIdentifier { name: (id) },
+                ))
+            } else {
+                Ok(RefTy::RStruct(id))
+            }
+        }
+        RefTy::RArray(b) => match typecheck_ty(h, b.as_ref().into(), null*) {
+            Ok(t) => Ok(RefTy::RArray(Box::new(t))),
+            Err(te) => Err(te)
+            }
+        }
+
+
+        RefTy::RFun(_, _) => (),
     }
 }
 

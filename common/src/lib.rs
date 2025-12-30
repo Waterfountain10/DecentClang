@@ -5,10 +5,12 @@ pub struct Span {
 }
 
 impl Span {
+    // used for persistent expressions
     pub fn new(start: usize, end: usize) -> Self {
         Self { start, end }
     }
 
+    // used as filler for types or abstract entities (example RefTy)
     pub fn dummy() -> Self {
         Self { start: 0, end: 0 }
     }
