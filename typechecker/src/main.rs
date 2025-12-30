@@ -119,9 +119,11 @@ fn subtype_list(h: &TypeCtxt, l1: &[Ty], l2: &[Ty]) -> bool {
     l1.iter().zip(l2.iter()).all(|(t1, t2)| subtype(h, t1, t2))
 }
 
-// fields n1 are a subtype of n2 if n2 is a prefix of n1
+// struct n1 <: struct n2 iff
+// fields(n2) is a prefix of fields(n1)
+//
+// ex: s1.a <= s2.a,
 fn subtype_fields(h: &TypeCtxt, n1: IdTy, n2: IdTy) -> bool {
-    print!("not implemented yet.");
     return false;
 }
 
@@ -130,13 +132,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// TYPECHECKING (a.k.a TYPE INFERENCE RULES)
+// TYPECHECKING (a.k.a TYPE INFERENCE RULES) -------------------------------------------
 
+// WELL TYPEDNESS RULES (tc type, tc ref, tc ret )
+//
+// functions that check that types are well formed according
+// to the H |- t and related inference rules
 // used for:
-// CArr,
-// NewArrInit : int[] myArray = [1,2,3]
+// CArr : int[] a; => tc the TYPE int
+// NewArrInit : int[] a = [1, 2, 3]; => tc the TYPE int again
+//
+// not NewArr : int[] a = new int[10]; => tc also, but different because init. arrays dont support TRef types
 fn typecheck_ty(h: TypeCtxt, t: Ty) -> TcResult<Ty> {
-    match (t) {}
+    match t {
+        Ty::TBool => Ok(TBool),
+
+        Ty::TInt => Ok(TInt),
+
+        Ty::TRef(r) | Ty::TNullRef(r) => typecheck_ref(h, r),
+    }
 }
 
 fn typecheck_exp(env: &Env, e: &Exp) -> TcResult<Ty> {
