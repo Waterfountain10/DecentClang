@@ -1,21 +1,16 @@
 #! Abstract Syntax Tree for Oat
 
+use common;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RangeTy {
-    pub start: i64,
-    pub end: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Node<T> {
     pub elt: T,
-    pub loc: RangeTy,
+    pub loc: common::Span,
 }
 
 pub type IdTy = String;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Ty {
     TBool,
     TInt,
@@ -23,35 +18,28 @@ pub enum Ty {
     TNullRef(RefTy), // TODO: did we want tnullref here or somehwer else??
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum RefTy {
     RString,
-    RArray(Box<Ty>),
-    RFun(Vec<Ty>, Box<RetTy>),
+    RArray(Box<STy>),
+    RFun(Vec<STy>, Box<SRetTy>),
     RStruct(IdTy), // TODO: did we want structs here or somehwer else??
 }
 
-trait IntoRefTy {}
-
-trait Zero {
-    const ZERO: Self;
-    fn is_zero(&self) -> bool;
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum RetTy {
     RetVoid,
-    RetVal(Box<Ty>),
+    RetVal(Box<STy>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum UnOp {
     Neg,
     LogNot,
     BitNot,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum BinOp {
     Add,
     Sub,
@@ -71,7 +59,7 @@ pub enum BinOp {
     Sar,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Exp {
     CNull(RefTy),
     CBool(bool),
@@ -156,3 +144,10 @@ pub enum Decl {
 }
 
 pub type Prog = Vec<Decl>;
+
+// Spanned-related constructs (useful for error-log in typechecker)
+pub type STy = common::Spanned<Ty>;
+pub type SRetTy = common::Spanned<RetTy>;
+pub type SRefTy = common::Spanned<RefTy>;
+pub type SExp = common::Spanned<Exp>;
+pub type SStmt = common::Spanned<Stmt>;

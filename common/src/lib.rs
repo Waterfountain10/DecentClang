@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -10,9 +10,20 @@ impl Span {
         Self { start, end }
     }
 
-    // used as filler for types or abstract entities (example RefTy)
     pub fn dummy() -> Self {
         Self { start: 0, end: 0 }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Spanned<T> {
+    pub span: Span,
+    pub node: T,
+}
+
+impl<T> Spanned<T> {
+    pub fn new(span: Span, node: T) -> Self {
+        Self { span, node }
     }
 }
 

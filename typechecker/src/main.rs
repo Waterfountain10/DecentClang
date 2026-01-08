@@ -136,98 +136,55 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 // TYPECHECKING (a.k.a TYPE INFERENCE RULES) -------------------------------------------
 
 // WELL TYPEDNESS RULES (tc type, tc ref, tc ret )
-//
 // functions that check that types are well formed according
 // to the H |- t and related inference rules
-// used for:
-// CArr : int[] a; => tc the TYPE int
-// NewArrInit : int[] a = [1, 2, 3]; => tc the TYPE int again
-//
-// not NewArr : int[] a = new int[10]; => tc also, but different because init. arrays dont support TRef types
-fn typecheck_ty(h: TypeCtxt, t: ast::Ty, null: bool) -> TcResult<ast::Ty> {
-    match t {
-        Ty::TBool => Ok(Ty::TBool),
 
-        Ty::TInt => Ok(Ty::TInt),
+// H |- t
+fn typecheck_ty(h: &TypeCtxt, t: &ast::STy) -> TcResult<()> {
+    match &t.node {
+        Ty::TBool | Ty::TInt => Ok(()),
 
-        Ty::TRef(r) | Ty::TNullRef(r) => match typecheck_ref(h, r, &null) {
-            Ok(rt) => {
-                if null == true {
-                    Ok(Ty::TNullRef(rt))
-                } else {
-                    Ok(Ty::TRef(rt))
-                }
-            }
-            Err(te) => Err(te), // typecheck_ref handles the Err format already
-        },
+        Ty::TRef(r) | Ty::TNullRef(r) => typecheck_ref(h, Spanned::new(t.span, r)),
     }
 }
 
-fn typecheck_ref(h: TypeCtxt, r: ast::RefTy, mut null: &bool) -> TcResult<ast::RefTy> {
-    match r {
-        RefTy::RString => Ok(RefTy::RString),
+// H |-ref rt
+fn typecheck_ref(h: &TypeCtxt, r: &ast::SRefTy) -> TcResult<()> {
+    match &r.node {
+        RefTy::RString => Ok(()),
 
         RefTy::RStruct(id) => {
+            // if struct's id is not findable in our current context
             if h.lookup_struct_option(id.as_str()).is_none() {
                 Err(type_error(
                     format!("Unbound struct type for {}", id),
-                    Span::dummy(),
-                    TypeErrorKind::UnknownIdentifier { name: (id) },
+                    r.span,
+                    TypeErrorKind::UnknownIdentifier { name: (id.clone()) },
                 ))
             } else {
-                Ok(RefTy::RStruct(id))
+                Ok(())
             }
         }
 
-        RefTy::RArray(b) => match typecheck_ty(h, *(b.as_ref()), *null) {
-            Ok(t) => Ok(RefTy::RArray(Box::new(t))),
-            Err(te) => Err(te),
-        },
+        //  elt : Box<STy>
+        RefTy::RArray(elt) => typecheck_ty(h, elt.as_ref()), // as_ref : go inside the box
 
-        RefTy::RFun(tlist, ret_box) => {
-            typecheck_ret(h, ret_box.into());
-            if tlist.iter().all(|t| typecheck_ty(h, *t, *null).is_ok()) {
-                Ok(RefTy::RFun((tlist), (ret)))
-            } else {
-                Err(type_error(
-                    format!(
-                        "Mismatch in RFun type for inputs {:?} and output {:?}",
-                        tlist,
-                        ret.
-                    ),
-                    Span::dummy(),
-                    TypeErrorKind::Mismatch {
-                        expected: format!("{:?} -> {:?}", tlist, ret),
-                        found: format!("{:?}", r),
-                    },
-                ))
+        // args: Vec<STy>, ret: Box<SRetTy>
+        RefTy::RFun(args, ret) => {
+            for a in args {
+                typecheck_ty(h, a)?
             }
+            typecheck_ret(h, ret.as_ref())?;
+            Ok(())
         }
     }
 }
 
-fn typecheck_ret(h: TypeCtxt, ret: RetTy) -> TcResult<ast::RetTy> {}
+// H |-ret r
+fn typecheck_ret(h: &TypeCtxt, ret: &ast::SRetTy) -> TcResult<()> {
+    match ret.node {
+        RetTy::RetVoid => Ok(()),
 
-fn typecheck_exp(env: &Env, e: &Exp) -> TcResult<Ty> {
-    match e {
-        Exp::Int(_, _) => Ok(Ty::TInt),
-
-        Exp::Bool(_, _) => Ok(Ty::TBool),
-
-        Exp::Var(span, x) => env
-            .lookup(x)
-            .cloned()
-            .ok_or_else(|| type_error(*span, format!("unbound variable `{}`", x))),
-
-        Exp::Add(span, e1, e2) => {
-            let t1 = typecheck_exp(env, e1)?; // ← HERE
-            let t2 = typecheck_exp(env, e2)?; // ← HERE
-
-            if t1 == Ty::TInt && t2 == Ty::TInt {
-                Ok(Ty::TInt)
-            } else {
-                Err(type_error(*span, "both operands of + must be int"))
-            }
-        }
+        RetTy::RetVal(val) => typecheck_ty(h, v),
     }
 }
