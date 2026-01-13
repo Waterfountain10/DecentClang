@@ -10,15 +10,15 @@ pub struct Node<T> {
 
 pub type IdTy = String;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     TBool,
     TInt,
-    TRef(RefTy),
-    TNullRef(RefTy), // TODO: did we want tnullref here or somehwer else??
+    TRef(SRefTy),
+    TNullRef(SRefTy), // TODO: did we want tnullref here or somehwer else??
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RefTy {
     RString,
     RArray(Box<STy>),
@@ -26,7 +26,7 @@ pub enum RefTy {
     RStruct(IdTy), // TODO: did we want structs here or somehwer else??
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RetTy {
     RetVoid,
     RetVal(Box<STy>),

@@ -26,15 +26,11 @@
 //! ```
 //!
 
-use std::fmt::Debug;
-
 use ast::RefTy;
 use ast::RetTy;
 use ast::Ty;
 
 use ::common::TypeErrorKind;
-use common::Span;
-use common::TypeError;
 use typechecker::*;
 
 // fn typecheck_program(p: ast::Prog) -> Result<(), ()> {
@@ -59,8 +55,8 @@ use typechecker::*;
 //  Decides whether H |- t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype(h: &TypeCtxt, t1: &ast::Ty, t2: &ast::Ty) -> bool {
-    match (t1, t2) {
+fn subtype(h: &TypeCtxt, t1: &ast::STy, t2: &ast::STy) -> bool {
+    match (&t1.node, &t2.node) {
         (Ty::TInt, Ty::TInt) => true,
 
         (Ty::TBool, Ty::TBool) => true,
@@ -78,14 +74,14 @@ fn subtype(h: &TypeCtxt, t1: &ast::Ty, t2: &ast::Ty) -> bool {
 //  Decides whether H |-ref t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype_ref(h: &TypeCtxt, t1: &ast::RefTy, t2: &ast::RefTy) -> bool {
-    match (t1, t2) {
+fn subtype_ref(h: &TypeCtxt, t1: &ast::SRefTy, t2: &ast::SRefTy) -> bool {
+    match (&t1.node, &t2.node) {
         (RefTy::RString, RefTy::RString) => true,
 
-        (RefTy::RArray(elt_t1), RefTy::RArray(elt_t2)) => elt_t1.as_ref() == elt_t2.as_ref(), // check type equalities for elts
+        (RefTy::RArray(elt_t1), RefTy::RArray(elt_t2)) => elt_t1.node == elt_t2.node, // check type equalities for elts
 
         (RefTy::RFun(args1, out1), RefTy::RFun(args2, out2)) => {
-            subtype_list(h, args2.as_slice(), args1.as_slice()) && subtype_ret(h, out1, out2)
+            subtype_list(h, args2.as_slice(), args1.as_slice()) && subtype_ret(h, out1.as_ref(), out2.as_ref())
         }
 
         (RefTy::RStruct(id1), RefTy::RStruct(id2)) => {
@@ -100,8 +96,8 @@ fn subtype_ref(h: &TypeCtxt, t1: &ast::RefTy, t2: &ast::RefTy) -> bool {
 //  Decides whether H |-ret t1 <: t2
 //     - assumes that H contains the declarations of all the possible struct types
 //
-fn subtype_ret(h: &TypeCtxt, t1: &ast::RetTy, t2: &ast::RetTy) -> bool {
-    match (t1, t2) {
+fn subtype_ret(h: &TypeCtxt, t1: &ast::SRetTy, t2: &ast::SRetTy) -> bool {
+    match (&t1.node, &t2.node) {
         (RetTy::RetVoid, RetTy::RetVoid) => true,
 
         (RetTy::RetVal(v1), RetTy::RetVal(v2)) => subtype(h, v1.as_ref(), v2.as_ref()),
@@ -112,7 +108,7 @@ fn subtype_ret(h: &TypeCtxt, t1: &ast::RetTy, t2: &ast::RetTy) -> bool {
 
 // helper for subtyping list like arguments in functions
 // ex : [a1,a2,a3] and [b1,b2,b3]
-fn subtype_list(h: &TypeCtxt, l1: &[ast::Ty], l2: &[ast::Ty]) -> bool {
+fn subtype_list(h: &TypeCtxt, l1: &[ast::STy], l2: &[ast::STy]) -> bool {
     if l1.len() != l2.len() {
         return false;
     }
@@ -124,7 +120,7 @@ fn subtype_list(h: &TypeCtxt, l1: &[ast::Ty], l2: &[ast::Ty]) -> bool {
 // fields(n2) is a prefix of fields(n1)
 //
 // ex: s1.a <= s2.a,
-fn subtype_fields(h: &TypeCtxt, n1: ast::IdTy, n2: ast::IdTy) -> bool {
+fn subtype_fields(_h: &TypeCtxt, _n1: ast::IdTy, _n2: ast::IdTy) -> bool {
     return false;
 }
 
@@ -133,32 +129,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// TYPECHECKING (a.k.a TYPE INFERENCE RULES) -------------------------------------------
-
-// WELL TYPEDNESS RULES (tc type, tc ref, tc ret )
+// WELL TYPEDNESS RULES (tc type, tc ref, tc ret ) ------------------------------------------
+//
 // functions that check that types are well formed according
 // to the H |- t and related inference rules
 
-// H |- t
 fn typecheck_ty(h: &TypeCtxt, t: &ast::STy) -> TcResult<()> {
     match &t.node {
         Ty::TBool | Ty::TInt => Ok(()),
 
-        Ty::TRef(r) | Ty::TNullRef(r) => typecheck_ref(h, Spanned::new(t.span, r)),
+        Ty::TRef(r) | Ty::TNullRef(r) => typecheck_ref(h, r),
     }
 }
 
-// H |-ref rt
 fn typecheck_ref(h: &TypeCtxt, r: &ast::SRefTy) -> TcResult<()> {
     match &r.node {
         RefTy::RString => Ok(()),
 
         RefTy::RStruct(id) => {
-            // if struct's id is not findable in our current context
+            // if struct's id is not findable in our current context -> error
             if h.lookup_struct_option(id.as_str()).is_none() {
                 Err(type_error(
                     format!("Unbound struct type for {}", id),
-                    r.span,
+                    r.span.clone(),
                     TypeErrorKind::UnknownIdentifier { name: (id.clone()) },
                 ))
             } else {
@@ -179,12 +172,12 @@ fn typecheck_ref(h: &TypeCtxt, r: &ast::SRefTy) -> TcResult<()> {
         }
     }
 }
-
-// H |-ret r
 fn typecheck_ret(h: &TypeCtxt, ret: &ast::SRetTy) -> TcResult<()> {
-    match ret.node {
+    match &ret.node {
         RetTy::RetVoid => Ok(()),
 
-        RetTy::RetVal(val) => typecheck_ty(h, v),
+        RetTy::RetVal(val) => typecheck_ty(h, val.as_ref()),
     }
 }
+
+// TYPECHECKING (a.k.a TYPE INFERENCE RULES) -------------------------------------------
