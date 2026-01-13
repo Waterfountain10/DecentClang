@@ -114,24 +114,24 @@ pub fn type_error(msg: impl Into<String>, span: Span, kind: TypeErrorKind) -> Ty
     }
 }
 
-// typecheck rule helpers
+// Typechecking-rule helpers (ex. constructors)
 
-// Helper function to create a spanned type from a Ty
+// spanned type
 pub fn mk_sty(ty: Ty, span: common::Span) -> ast::STy {
     common::Spanned::new(span, ty)
 }
 
-// Helper function to create a spanned reference type
+// spanned reference type
 pub fn mk_srefty(rty: RefTy, span: common::Span) -> ast::SRefTy {
     common::Spanned::new(span, rty)
 }
 
-// Helper function to create a spanned return type
+// spanned return type
 pub fn mk_sretty(ret: RetTy, span: common::Span) -> ast::SRetTy {
     common::Spanned::new(span, ret)
 }
 
-// Helper constructors for common spanned types
+// following is common spanned types (ex TInt, TBool,...)
 pub fn mk_t_int(span: common::Span) -> ast::STy {
     mk_sty(Ty::TInt, span)
 }
@@ -156,7 +156,6 @@ pub fn mk_r_array(elt: Box<ast::STy>, span: common::Span) -> ast::SRefTy {
     mk_srefty(RefTy::RArray(elt), span)
 }
 
-// Helper function to get the type of a binary operator
 pub fn typ_of_binop(b: &ast::BinOp) -> (Ty, Ty, Ty) {
     use ast::BinOp::*;
     match b {
@@ -166,7 +165,6 @@ pub fn typ_of_binop(b: &ast::BinOp) -> (Ty, Ty, Ty) {
     }
 }
 
-// Helper function to get the type of a unary operator
 pub fn typ_of_unop(u: &ast::UnOp) -> (Ty, Ty) {
     use ast::UnOp::*;
     match u {
