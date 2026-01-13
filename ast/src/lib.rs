@@ -61,17 +61,17 @@ pub enum BinOp {
 
 #[derive(Debug, Clone)]
 pub enum Exp {
-    CNull(RefTy),
+    CNull(SRefTy),
     CBool(bool),
     CInt(i64),
     CStr(String),
-    CArr(Ty, Vec<Node<Exp>>),
-    NewArr(Ty, Box<Node<Exp>>),
+    CArr(Ty, Vec<Node<SExp>>),
+    NewArr(Ty, Box<Node<SExp>>),
     Id(IdTy),
-    Index(Box<Node<Exp>>, Box<Node<Exp>>),
-    Call(Box<Node<Exp>>, Vec<Node<Exp>>),
-    Bop(BinOp, Box<Node<Exp>>, Box<Node<Exp>>),
-    Uop(UnOp, Box<Node<Exp>>),
+    Index(Box<Node<SExp>>, Box<Node<SExp>>),
+    Call(Box<Node<SExp>>, Vec<Node<SExp>>),
+    Bop(BinOp, Box<Node<SExp>>, Box<Node<SExp>>),
+    Uop(UnOp, Box<Node<SExp>>),
 }
 
 #[derive(Debug, Clone)]

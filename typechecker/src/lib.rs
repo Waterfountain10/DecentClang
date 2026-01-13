@@ -113,3 +113,64 @@ pub fn type_error(msg: impl Into<String>, span: Span, kind: TypeErrorKind) -> Ty
         kind,
     }
 }
+
+// typecheck rule helpers
+
+// Helper function to create a spanned type from a Ty
+pub fn mk_sty(ty: Ty, span: common::Span) -> ast::STy {
+    common::Spanned::new(span, ty)
+}
+
+// Helper function to create a spanned reference type
+pub fn mk_srefty(rty: RefTy, span: common::Span) -> ast::SRefTy {
+    common::Spanned::new(span, rty)
+}
+
+// Helper function to create a spanned return type
+pub fn mk_sretty(ret: RetTy, span: common::Span) -> ast::SRetTy {
+    common::Spanned::new(span, ret)
+}
+
+// Helper constructors for common spanned types
+pub fn mk_t_int(span: common::Span) -> ast::STy {
+    mk_sty(Ty::TInt, span)
+}
+
+pub fn mk_t_bool(span: common::Span) -> ast::STy {
+    mk_sty(Ty::TBool, span)
+}
+
+pub fn mk_t_ref(rty: ast::SRefTy, span: common::Span) -> ast::STy {
+    mk_sty(Ty::TRef(rty), span)
+}
+
+pub fn mk_t_null_ref(rty: ast::SRefTy, span: common::Span) -> ast::STy {
+    mk_sty(Ty::TNullRef(rty), span)
+}
+
+pub fn mk_r_string(span: common::Span) -> ast::SRefTy {
+    mk_srefty(RefTy::RString, span)
+}
+
+pub fn mk_r_array(elt: Box<ast::STy>, span: common::Span) -> ast::SRefTy {
+    mk_srefty(RefTy::RArray(elt), span)
+}
+
+// Helper function to get the type of a binary operator
+pub fn typ_of_binop(b: &ast::BinOp) -> (Ty, Ty, Ty) {
+    use ast::BinOp::*;
+    match b {
+        Add | Sub | Mul | IAnd | IOr | Shl | Shr | Sar => (Ty::TInt, Ty::TInt, Ty::TInt),
+        Eq | Neq | Lt | Lte | Gt | Gte => (Ty::TInt, Ty::TInt, Ty::TBool),
+        And | Or => (Ty::TBool, Ty::TBool, Ty::TBool),
+    }
+}
+
+// Helper function to get the type of a unary operator
+pub fn typ_of_unop(u: &ast::UnOp) -> (Ty, Ty) {
+    use ast::UnOp::*;
+    match u {
+        Neg | BitNot => (Ty::TInt, Ty::TInt),
+        LogNot => (Ty::TBool, Ty::TBool),
+    }
+}
