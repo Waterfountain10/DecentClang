@@ -7,6 +7,9 @@ members = [
     "x86",
     "frontend",
     "backend",
-    "driver"
-, "assembler", "linker", "typechecker"]
+    "driver",
+    "assembler",
+    "linker",
+    "typechecker",
+    "common"]
 resolver = "3"

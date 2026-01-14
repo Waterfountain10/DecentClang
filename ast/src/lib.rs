@@ -1,50 +1,45 @@
 #! Abstract Syntax Tree for Oat
 
+use common;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RangeTy {
-    pub start: i64,
-    pub end: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Node<T> {
     pub elt: T,
-    pub loc: RangeTy,
+    pub loc: common::Span,
 }
 
 pub type IdTy = String;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     TBool,
     TInt,
-    TRef(RefTy),
-    TNullRef(RefTy), // TODO: did we want tnullref here or somehwer else??
+    TRef(SRefTy),
+    TNullRef(SRefTy),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RefTy {
     RString,
-    RArray(Box<Ty>),
-    RFun(Vec<Ty>, RetTy),
-    RStruct(IdTy), // TODO: did we want structs here or somehwer else??
+    RArray(Box<STy>),
+    RFun(Vec<STy>, Box<SRetTy>),
+    RStruct(IdTy),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RetTy {
     RetVoid,
-    RetVal(Box<Ty>),
+    RetVal(Box<STy>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum UnOp {
     Neg,
     LogNot,
     BitNot,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum BinOp {
     Add,
     Sub,
@@ -64,58 +59,67 @@ pub enum BinOp {
     Sar,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum Exp {
-    CNull(RefTy),
+    CNull(SRefTy),
     CBool(bool),
     CInt(i64),
     CStr(String),
-    CArr(Ty, Vec<Node<Exp>>),
-    NewArr(Ty, Box<Node<Exp>>),
+    CArr(Ty, Vec<Node<SExp>>),
+    NewArr(Ty, Box<Node<SExp>>),
     Id(IdTy),
-    Index(Box<Node<Exp>>, Box<Node<Exp>>),
-    Call(Box<Node<Exp>>, Vec<Node<Exp>>),
-    Bop(BinOp, Box<Node<Exp>>, Box<Node<Exp>>),
-    Uop(UnOp, Box<Node<Exp>>),
+    Index(Box<Node<SExp>>, Box<Node<SExp>>),
+    Call(Box<Node<SExp>>, Vec<Node<SExp>>),
+    Bop(BinOp, Box<Node<SExp>>, Box<Node<SExp>>),
+    Uop(UnOp, Box<Node<SExp>>),
 }
 
+#[derive(Debug, Clone)]
 pub struct CField {
     pub cf_id: IdTy,
-    pub cf_node: Node<Exp>,
+    pub cf_node: Node<SExp>,
 }
 
+// VDecl example:
+//   int x = 5; where vd_id=IntTy, vd_node=Some<Node<CInt(5)>>
+//   int x;     where vd_id=IntTy, vd_node=None
+#[derive(Debug, Clone)]
 pub struct VDecl {
     pub vd_id: IdTy,
-    pub vd_node: Node<Exp>,
+    pub vd_node: Option<Node<SExp>>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Stmt {
-    Assn(Node<Exp>, Node<Exp>),
+    Assn(Node<SExp>, Node<SExp>),
     Decl(VDecl),
-    Ret(Option<Node<Exp>>),
-    SCall(Node<Exp>, Vec<Node<Exp>>),
-    If(Node<Exp>, Vec<Node<Stmt>>, Vec<Node<Stmt>>),
+    Ret(Option<Node<SExp>>),
+    SCall(Node<SExp>, Vec<Node<SExp>>),
+    If(Node<SExp>, Vec<Node<SStmt>>, Vec<Node<SStmt>>),
     For(
         Vec<VDecl>,
-        Option<Node<Exp>>,
-        Option<Box<Node<Stmt>>>,
-        Vec<Node<Stmt>>,
+        Option<Node<SExp>>,
+        Option<Box<Node<SStmt>>>,
+        Vec<Node<SStmt>>,
     ),
-    While(Node<Exp>, Vec<Node<Stmt>>),
+    While(Node<SExp>, Vec<Node<SStmt>>),
 }
 
-pub type Block = Vec<Node<Stmt>>;
+pub type Block = Vec<Node<SStmt>>;
 
+#[derive(Debug, Clone)]
 pub struct GDecl {
     pub name: IdTy,
-    pub init: Node<Exp>,
+    pub init: Node<SExp>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Arg {
-    pub ty: Ty,
+    pub ty: STy,
     pub id: IdTy,
 }
 
+#[derive(Debug, Clone)]
 pub struct FDecl {
     pub fret_ty: RetTy,
     pub fname: IdTy,
@@ -123,16 +127,19 @@ pub struct FDecl {
     pub body: Block,
 }
 
+#[derive(Debug, Clone)]
 pub struct Field {
     pub field_name: IdTy,
     pub field_type: Ty,
 }
 
+#[derive(Debug, Clone)]
 pub struct TDecl {
     pub td_id: IdTy,
     pub td_node: Vec<Field>,
 }
 
+#[derive(Debug, Clone)]
 pub enum Decl {
     GVDecl(Node<GDecl>),
     GFDecl(Node<FDecl>),
@@ -140,3 +147,10 @@ pub enum Decl {
 }
 
 pub type Prog = Vec<Decl>;
+
+// Spanned-related constructs (useful for error-log in typechecker)
+pub type STy = common::Spanned<Ty>;
+pub type SRetTy = common::Spanned<RetTy>;
+pub type SRefTy = common::Spanned<RefTy>;
+pub type SExp = common::Spanned<Exp>;
+pub type SStmt = common::Spanned<Stmt>;

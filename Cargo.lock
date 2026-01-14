@@ -12,6 +12,9 @@ dependencies = [
 [[package]]
 name = "ast"
 version = "0.1.0"
+dependencies = [
+ "common",
+]
 
 [[package]]
 name = "backend"
@@ -20,6 +23,10 @@ dependencies = [
  "llvm",
  "x86",
 ]
+
+[[package]]
+name = "common"
+version = "0.1.0"
 
 [[package]]
 name = "driver"
@@ -63,6 +70,7 @@ name = "typechecker"
 version = "0.1.0"
 dependencies = [
  "ast",
+ "common",
 ]
 
 [[package]]

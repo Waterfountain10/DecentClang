@@ -65,7 +65,8 @@ pub fn parse_program(src: &str) -> Result<Prog, Box<dyn Error>> {
             let opcode = tokens[0].to_lowercase();
 
             // Very minimal parser for operands
-            let operands: Vec<Operand> = if tokens.len() > 1 {
+            let operands: Vec<Operand> = if tokens.
+                () > 1 {
                 tokens[1]
                     .split(',')
                     .map(|tok| parse_operand(tok.trim()))
