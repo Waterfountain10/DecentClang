@@ -27,6 +27,7 @@ DecentClang/
 │
 ├── lexer/         │ Tokenize Oat source code
 ├── parser/        │ Construct AST from tokens
+├── typechecker/   │ Type inference and validation (expressions, statements, programs)
 ├── frontend/      │ AST → LLVMlite IR lowering
 ├── llvm/          │ LLVMlite IR type and instruction defs
 ├── backend/       │ LLVMlite → x86 IR code generation
@@ -44,6 +45,7 @@ Each crate compiles independently, with no shared mutable state or unsafe code.
 Oat (C-like)
 → **Lexer**
 → **Parser**
+→ **Typechecker** (validate types, check return paths)
 → Frontend (AST → LLVMlite)
 → **LLVMlite IR**
 → **Backend** (LLVMlite → x86 IR)
@@ -52,6 +54,31 @@ Oat (C-like)
 → **Binary Executable**
 
 `**bold** = implemented and tested`
+
+---
+
+## Typechecker
+
+Validates AST before code generation. Checks type correctness and control flow.
+
+- Subtyping for reference types, nullable types, function signatures
+- Type inference for expressions and statements
+- Return path analysis for non-void functions
+- Lexical scoping with duplicate declaration prevention
+
+### API
+
+```rust
+use typechecker::typecheck_prog;
+
+let program: ast::Prog = /* parsed AST */;
+match typecheck_prog(&program) {
+    Ok(()) => println!("Program typechecks"),
+    Err(e) => eprintln!("Type error: {}", e.msg),
+}
+```
+
+Function signature: `pub fn typecheck_prog(prog: &ast::Prog) -> TcResult<()>`
 
 ---
 

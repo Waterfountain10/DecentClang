@@ -15,7 +15,7 @@ pub enum Ty {
     TBool,
     TInt,
     TRef(SRefTy),
-    TNullRef(SRefTy), // TODO: did we want tnullref here or somehwer else??
+    TNullRef(SRefTy),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,7 +23,7 @@ pub enum RefTy {
     RString,
     RArray(Box<STy>),
     RFun(Vec<STy>, Box<SRetTy>),
-    RStruct(IdTy), // TODO: did we want structs here or somehwer else??
+    RStruct(IdTy),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -77,42 +77,45 @@ pub enum Exp {
 #[derive(Debug, Clone)]
 pub struct CField {
     pub cf_id: IdTy,
-    pub cf_node: Node<Exp>,
+    pub cf_node: Node<SExp>,
 }
 
+// VDecl example:
+//   int x = 5; where vd_id=IntTy, vd_node=Some<Node<CInt(5)>>
+//   int x;     where vd_id=IntTy, vd_node=None
 #[derive(Debug, Clone)]
 pub struct VDecl {
     pub vd_id: IdTy,
-    pub vd_node: Node<Exp>,
+    pub vd_node: Option<Node<SExp>>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    Assn(Node<Exp>, Node<Exp>),
+    Assn(Node<SExp>, Node<SExp>),
     Decl(VDecl),
-    Ret(Option<Node<Exp>>),
-    SCall(Node<Exp>, Vec<Node<Exp>>),
-    If(Node<Exp>, Vec<Node<Stmt>>, Vec<Node<Stmt>>),
+    Ret(Option<Node<SExp>>),
+    SCall(Node<SExp>, Vec<Node<SExp>>),
+    If(Node<SExp>, Vec<Node<SStmt>>, Vec<Node<SStmt>>),
     For(
         Vec<VDecl>,
-        Option<Node<Exp>>,
-        Option<Box<Node<Stmt>>>,
-        Vec<Node<Stmt>>,
+        Option<Node<SExp>>,
+        Option<Box<Node<SStmt>>>,
+        Vec<Node<SStmt>>,
     ),
-    While(Node<Exp>, Vec<Node<Stmt>>),
+    While(Node<SExp>, Vec<Node<SStmt>>),
 }
 
-pub type Block = Vec<Node<Stmt>>;
+pub type Block = Vec<Node<SStmt>>;
 
 #[derive(Debug, Clone)]
 pub struct GDecl {
     pub name: IdTy,
-    pub init: Node<Exp>,
+    pub init: Node<SExp>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Arg {
-    pub ty: Ty,
+    pub ty: STy,
     pub id: IdTy,
 }
 

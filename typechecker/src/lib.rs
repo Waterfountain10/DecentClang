@@ -1,6 +1,5 @@
 #! Typechecker helpers & Context-related definitions
 
-use std::any::Any;
 use std::collections::HashMap;
 
 use ast::*;
@@ -59,6 +58,13 @@ impl TypeCtxt {
             }
         }
         None
+    }
+
+    // Check if a variable is declared in the current scope only (not parent scopes)
+    pub fn is_declared_in_current_scope(&self, id: &str) -> bool {
+        self.locals
+            .last()
+            .map_or(false, |scope| scope.contains_key(id))
     }
 
     // ----- globals -----

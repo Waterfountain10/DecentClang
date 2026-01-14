@@ -32,6 +32,7 @@ impl<T> Spanned<T> {
 pub enum TypeErrorKind {
     Mismatch { expected: String, found: String },
     UnknownIdentifier { name: String },
+    RedundantIdentifier { name: String },
     NotCallable { ty: String },
     // we can add more error kinds later
 }

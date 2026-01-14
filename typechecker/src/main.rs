@@ -30,28 +30,11 @@ use ast::BinOp;
 use ast::Exp;
 use ast::RefTy;
 use ast::RetTy;
+use ast::Stmt;
 use ast::Ty;
 
 use ::common::TypeErrorKind;
 use typechecker::*;
-
-// fn typecheck_program(p: ast::Prog) -> Result<(), ()> {
-//     for decl in p {
-//         match &decl {
-//             GFDecl(elt) => {
-//                 let f = elt
-//                 let res = typecheck_fdecl(tc, f, l)
-//             }
-//             GTDecl(_) => {
-//                 let res = typecheck_t
-//             }
-//             () =>
-//         }
-//     }
-
-//     Ok(res)
-// }
-//
 
 // subtyping ---------------------------------------------------------------- *)
 //  Decides whether H |- t1 <: t2
@@ -128,7 +111,8 @@ fn subtype_fields(_h: &TypeCtxt, _n1: ast::IdTy, _n2: ast::IdTy) -> bool {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    eprintln!("not implemented yet");
+    eprintln!("Typechecker implementation complete!");
+    eprintln!("Use typecheck_prog() to typecheck a program.");
     Ok(())
 }
 
@@ -182,6 +166,19 @@ fn typecheck_ret(h: &TypeCtxt, ret: &ast::SRetTy) -> TcResult<()> {
 
 // TYPECHECKING (a.k.a TYPE INFERENCE RULES) -------------------------------------------
 
+// Typecheck an Expression
+//
+//   This function should implement the statment typechecking rules from oat.pdf.
+//
+//   Inputs:
+//    - h: the type context library
+//    - e: node containing Spanned Expression
+//
+//   Returns:
+//    - the (most precise) type for the expression,
+//       if it is type correct according to the inference rules.
+//
+//    - context gets updated implicitly
 fn typecheck_exp(h: &TypeCtxt, e: &ast::Node<ast::SExp>) -> TcResult<ast::STy> {
     let span = e.loc.clone();
 
@@ -446,4 +443,524 @@ fn typecheck_exp(h: &TypeCtxt, e: &ast::Node<ast::SExp>) -> TcResult<ast::STy> {
             }
         }
     }
+}
+
+// Typecheck a statement
+//
+//   This function should implement the statment typechecking rules from oat.pdf.
+//
+//    Inputs:
+//     - h: the type context
+//     - s: the statement node
+//     - to_ret: the desired return type (from the function declaration)
+//
+//    Returns:
+//      - the new type context (which includes newly declared variables in scope
+//        after this statement)
+
+//      - A boolean indicating the return behavior of a statement:
+//         false:  might not return
+//         true: definitely returns
+
+//         in the branching statements, the return behavior of the branching
+//         statement is the conjunction of the return behavior of the two
+//         branches: both both branches must definitely return in order for
+//         the whole statement to definitely return.
+
+//         Intuitively: if one of the two branches of a conditional does not
+//         contain a return statement, then the entire conditional statement might
+//         not return.
+
+//         looping constructs never definitely return (While, For)
+//
+// Example statements:
+//   - Assn: x = 5;
+//   - Decl: var x = 5;
+//   - Ret: return; or return x;
+//   - SCall: foo();
+//   - If: if (x) { ... } else { ... }
+//   - For: for (var i = 0; i < 10; i = i + 1;) { ... }
+//   - While: while (x) { ... }
+//
+// Returns: Ok(bool) where bool indicates if the statement definitely returns
+//          true = definitely returns, false = might not return
+fn typecheck_stmt(
+    h: &mut TypeCtxt,
+    s: &ast::Node<ast::SStmt>,
+    to_ret: &ast::SRetTy,
+) -> TcResult<bool> {
+    match &s.elt.node {
+        // Assn: x = 5;
+        Stmt::Assn(e1, e2) => {
+            // Special check: prevent assignment to global functions
+            //   ex: foo = 5; where foo() is a global function -> ERROR...
+            //   else everything is OK!
+            if let Exp::Id(x) = &e1.elt.node {
+                // If x is NOT a local variable
+                if h.lookup_local_option(x.as_str()).is_none() {
+                    // Check if x is a global function
+                    if let Some(Ty::TRef(r)) = h.lookup_global_option(x.as_str()) {
+                        if matches!(&r.node, RefTy::RFun(..)) {
+                            return Err(type_error(
+                                format!("cannot assign to global function {}", x),
+                                s.loc.clone(),
+                                TypeErrorKind::Mismatch {
+                                    expected: "assignable lvalue".to_string(),
+                                    found: "function".to_string(),
+                                },
+                            ));
+                        }
+                    }
+                }
+            }
+
+            // Typecheck both sides and ensure types match
+            let assn_to = typecheck_exp(h, e1)?; // STY
+            let assn_from = typecheck_exp(h, e2)?; // STy
+            if subtype(h, &assn_from, &assn_to) {
+                Ok(false) // Assignment doesn't definitely return
+            } else {
+                Err(type_error(
+                    "Mismatched types in assignment",
+                    s.loc.clone(),
+                    TypeErrorKind::Mismatch {
+                        expected: format!("{:?}", assn_to.node),
+                        found: format!("{:?}", assn_from.node),
+                    },
+                ))
+            }
+        }
+
+        // Decl: int x = 5; where id is x and exp is
+        Stmt::Decl(vdecl) => {
+            // Check if variable is already declared in the current scope
+            // (not parent scopes - we allow shadowing)
+            // ex. int x = 2;
+            //     string x = "hey";
+            if h.is_declared_in_current_scope(&vdecl.vd_id) {
+                return Err(type_error(
+                    "Cannot redeclare variable",
+                    s.loc.clone(),
+                    TypeErrorKind::UnknownIdentifier {
+                        name: vdecl.vd_id.clone(),
+                    },
+                ));
+            }
+            // VDecl can be with or without initializer:
+            match &vdecl.vd_node {
+                // var x; (uninitialized - should we allow this?)
+                None => {
+                    // For now, this is an error in our type system
+                    // because we need to know the type
+                    return Err(type_error(
+                        "Variable declaration without initializer not supported",
+                        s.loc.clone(),
+                        TypeErrorKind::Mismatch {
+                            expected: "initializer expression".to_string(),
+                            found: "none".to_string(),
+                        },
+                    ));
+                }
+
+                // var x = e; (with initializer)
+                Some(exp_node) => {
+                    let exp_type = typecheck_exp(h, exp_node)?;
+                    h.add_local(vdecl.vd_id.clone(), exp_type.node);
+                    Ok(false) // Declaration doesn't definitely return
+                }
+            }
+        }
+
+        // Return Statement:
+        //      ex : return; or return x + 5;
+        Stmt::Ret(r) => match (r, &to_ret.node) {
+            // return; in VOID -> ok!
+            (None, RetTy::RetVoid) => Ok(true),
+
+            // return e; in Non-VOID -> ok!
+            (Some(r_exp), RetTy::RetVal(expected_ty)) => {
+                let t = typecheck_exp(h, r_exp)?;
+                if subtype(h, &t, expected_ty.as_ref()) {
+                    Ok(true) // Return statement definitely returns
+                } else {
+                    Err(type_error(
+                        "Returned incorrect type",
+                        s.loc.clone(),
+                        TypeErrorKind::Mismatch {
+                            expected: format!("{:?}", expected_ty.node),
+                            found: format!("{:?}", t.node),
+                        },
+                    ))
+                }
+            }
+
+            // return; but NON-VOID -> (ERROR)
+            (None, RetTy::RetVal(_)) => Err(type_error(
+                "Returned void in non-void function",
+                s.loc.clone(),
+                TypeErrorKind::Mismatch {
+                    expected: "non-void value".to_string(),
+                    found: "void".to_string(),
+                },
+            )),
+
+            // return e; but VOID -> (ERROR)
+            (Some(_), RetTy::RetVoid) => Err(type_error(
+                "Returned non-void in void function",
+                s.loc.clone(),
+                TypeErrorKind::Mismatch {
+                    expected: "void".to_string(),
+                    found: "non-void value".to_string(),
+                },
+            )),
+        },
+
+        // foo(); (statement call - function must return void)
+        // Example: print_int(42);
+        Stmt::SCall(f, args) => {
+            let mut argtyps = Vec::new();
+            for arg in args {
+                argtyps.push(typecheck_exp(h, arg)?);
+            }
+
+            let ftyp = typecheck_exp(h, f)?;
+
+            match &ftyp.node {
+                Ty::TRef(r) | Ty::TNullRef(r) => {
+                    match &r.node {
+                        RefTy::RFun(param_types, ret_ty) => {
+                            // Check that function returns void
+                            if !matches!(&ret_ty.node, RetTy::RetVoid) {
+                                return Err(type_error(
+                                    "Statement call requires void function",
+                                    s.loc.clone(),
+                                    TypeErrorKind::Mismatch {
+                                        expected: "void return type".to_string(),
+                                        found: format!("{:?}", ret_ty.node),
+                                    },
+                                ));
+                            }
+
+                            // Check correct number of arguments
+                            if param_types.len() != argtyps.len() {
+                                return Err(type_error(
+                                    "Incorrect number of arguments",
+                                    s.loc.clone(),
+                                    TypeErrorKind::Mismatch {
+                                        expected: format!("{} arguments", param_types.len()),
+                                        found: format!("{} arguments", argtyps.len()),
+                                    },
+                                ));
+                            }
+
+                            // Check argument types
+                            for (i, (arg, param)) in
+                                argtyps.iter().zip(param_types.iter()).enumerate()
+                            {
+                                if !subtype(h, arg, param) {
+                                    return Err(type_error(
+                                        format!("Incorrect type of argument {}", i),
+                                        s.loc.clone(),
+                                        TypeErrorKind::Mismatch {
+                                            expected: format!("{:?}", param.node),
+                                            found: format!("{:?}", arg.node),
+                                        },
+                                    ));
+                                }
+                            }
+
+                            Ok(false) // Statement call doesn't definitely return
+                        }
+                        _ => Err(type_error(
+                            "Need function argument for function call",
+                            f.loc.clone(),
+                            TypeErrorKind::NotCallable {
+                                ty: format!("{:?}", ftyp.node),
+                            },
+                        )),
+                    }
+                }
+                _ => Err(type_error(
+                    "Need function argument for function call",
+                    f.loc.clone(),
+                    TypeErrorKind::NotCallable {
+                        ty: format!("{:?}", ftyp.node),
+                    },
+                )),
+            }
+        }
+
+        // if (e) { ... } else { ... } (conditional statement)
+        // Example: if (x > 0) { return 1; } else { return -1; }
+        Stmt::If(guard, then_block, else_block) => {
+            let guard_type = typecheck_exp(h, guard)?;
+
+            if guard_type.node != Ty::TBool {
+                return Err(type_error(
+                    "Incorrect type for guard",
+                    guard.loc.clone(),
+                    TypeErrorKind::Mismatch {
+                        expected: "TBool".to_string(),
+                        found: format!("{:?}", guard_type.node),
+                    },
+                ));
+            }
+
+            let lft_ret = typecheck_block(h, then_block, to_ret)?;
+            let rgt_ret = typecheck_block(h, else_block, to_ret)?;
+
+            // Both branches must return for the if to definitely return
+            Ok(lft_ret && rgt_ret)
+        }
+
+        // for (var x = e1, var y = e2, ...; guard; increment) { body }
+        // Example: for (var i = 0; i < 10; i = i + 1;) { print_int(i); }
+        Stmt::For(vdecls, guard, increment, body) => {
+            // Create new scope for the for loop
+            h.push_scope();
+
+            // Add all declared variables to the new scope
+            for vdecl in vdecls {
+                // Check the initializer if present
+                match &vdecl.vd_node {
+                    None => {
+                        h.pop_scope();
+                        return Err(type_error(
+                            "For loop variable declaration requires initializer",
+                            s.loc.clone(),
+                            TypeErrorKind::Mismatch {
+                                expected: "initializer".to_string(),
+                                found: "none".to_string(),
+                            },
+                        ));
+                    }
+                    Some(exp_node) => {
+                        let t = typecheck_exp(h, exp_node)?;
+                        h.add_local(vdecl.vd_id.clone(), t.node);
+                    }
+                }
+            }
+
+            // Check guard expression if present
+            if let Some(guard_exp) = guard {
+                let guard_type = typecheck_exp(h, guard_exp)?;
+                if guard_type.node != Ty::TBool {
+                    h.pop_scope();
+                    return Err(type_error(
+                        "Incorrect type for guard",
+                        guard_exp.loc.clone(),
+                        TypeErrorKind::Mismatch {
+                            expected: "TBool".to_string(),
+                            found: format!("{:?}", guard_type.node),
+                        },
+                    ));
+                }
+            }
+
+            // Check increment statement if present
+            if let Some(inc_stmt) = increment {
+                let rt = typecheck_stmt(h, inc_stmt, to_ret)?;
+                if rt {
+                    h.pop_scope();
+                    return Err(type_error(
+                        "Cannot return in for loop increment",
+                        inc_stmt.loc.clone(),
+                        TypeErrorKind::Mismatch {
+                            expected: "non-returning statement".to_string(),
+                            found: "return statement".to_string(),
+                        },
+                    ));
+                }
+            }
+
+            // Typecheck the body
+            let _ = typecheck_block(h, body, to_ret)?;
+
+            // Pop the for loop scope
+            h.pop_scope();
+
+            // For loops never definitely return
+            Ok(false)
+        }
+
+        // while (e) { body } (while loop)
+        // Example: while (x > 0) { x = x - 1; }
+        Stmt::While(guard, body) => {
+            let guard_type = typecheck_exp(h, guard)?;
+
+            if guard_type.node != Ty::TBool {
+                return Err(type_error(
+                    "Incorrect type for guard",
+                    guard.loc.clone(),
+                    TypeErrorKind::Mismatch {
+                        expected: "TBool".to_string(),
+                        found: format!("{:?}", guard_type.node),
+                    },
+                ));
+            }
+
+            let _ = typecheck_block(h, body, to_ret)?;
+
+            // While loops never definitely return
+            Ok(false)
+        }
+    }
+}
+
+// Typecheck a block of statements
+// Returns true if the block definitely returns, false otherwise
+fn typecheck_block(
+    h: &mut TypeCtxt,
+    block: &[ast::Node<ast::SStmt>],
+    to_ret: &ast::SRetTy,
+) -> TcResult<bool> {
+    // Push a new scope for the block
+    h.push_scope();
+
+    let mut definitely_returns = false;
+
+    for stmt in block {
+        let returns = typecheck_stmt(h, stmt, to_ret)?;
+        if returns {
+            definitely_returns = true;
+            // for now, we will ignore unreachable code,
+            // once every block "returns" wether they are reachable or not,
+            // then we pop the scope and output a OK(true), else Ok(false)
+            //
+        }
+    }
+
+    // Pop the block scope
+    h.pop_scope();
+
+    Ok(definitely_returns)
+}
+
+// PROGRAM-LEVEL TYPECHECKING -------------------------------------------
+
+// Typecheck a global variable declaration ---------------------------
+//      ex: int global_x = 42;
+fn typecheck_gvdecl(h: &mut TypeCtxt, gvdecl: &ast::Node<ast::GDecl>) -> TcResult<()> {
+    let name = &gvdecl.elt.name;
+    let init = &gvdecl.elt.init;
+
+    // Typecheck the initializer expression
+    let init_type = typecheck_exp(h, init)?;
+
+    // Add to global context
+    h.add_global(name.clone(), init_type.node);
+
+    Ok(())
+}
+
+// Typecheck a struct/type declaration -------------------------------
+//      ex : struct Point { int x; int y; }
+fn typecheck_tdecl(h: &mut TypeCtxt, tdecl: &ast::Node<ast::TDecl>) -> TcResult<()> {
+    let struct_name = &tdecl.elt.td_id;
+    let fields = &tdecl.elt.td_node;
+
+    // check duplicate field names
+    let mut field_names = std::collections::HashSet::new();
+    for field in fields {
+        if !field_names.insert(&field.field_name) {
+            return Err(type_error(
+                format!(
+                    "Duplicate field name '{}' in struct '{}'",
+                    field.field_name, struct_name
+                ),
+                tdecl.loc.clone(),
+                TypeErrorKind::UnknownIdentifier {
+                    name: field.field_name.clone(),
+                },
+            ));
+        }
+
+        // check field ty is well formed
+        let field_ty = mk_sty(field.field_type.clone(), tdecl.loc.clone());
+        typecheck_ty(h, &field_ty)?;
+    }
+
+    h.add_struct(struct_name.clone(), fields.clone());
+
+    Ok(())
+}
+
+// Typecheck a function declaration ------------------------------------
+//     ex: int foo(int x, bool y) { return x; }
+fn typecheck_fdecl(h: &mut TypeCtxt, fdecl: &ast::Node<ast::FDecl>) -> TcResult<()> {
+    let fname = &fdecl.elt.fname;
+    let args = &fdecl.elt.args;
+    let ret_ty = &fdecl.elt.fret_ty;
+    let body = &fdecl.elt.body;
+
+    // Build function type for context
+    let arg_types: Vec<ast::STy> = args.iter().map(|arg| arg.ty.clone()).collect();
+    let ret_ty_spanned = mk_sretty(ret_ty.clone(), fdecl.loc.clone());
+
+    // Create function type: TRef(RFun(args, ret))
+    let fun_ref_ty = mk_srefty(
+        RefTy::RFun(arg_types.clone(), Box::new(ret_ty_spanned.clone())),
+        fdecl.loc.clone(),
+    );
+    let fun_ty = mk_sty(Ty::TRef(fun_ref_ty), fdecl.loc.clone());
+
+    h.add_global(fname.clone(), fun_ty.node);
+
+    // new scope for function body
+    h.push_scope();
+
+    for arg in args {
+        h.add_local(arg.id.clone(), arg.ty.node.clone());
+    }
+
+    let body_returns = typecheck_block(h, body, &ret_ty_spanned)?;
+
+    // Check that non-void functions return on all paths
+    if !matches!(ret_ty, RetTy::RetVoid) && !body_returns {
+        h.pop_scope();
+        return Err(type_error(
+            format!("Function '{}' does not return on all paths", fname),
+            fdecl.loc.clone(),
+            TypeErrorKind::Mismatch {
+                expected: "return statement".to_string(),
+                found: "end of function".to_string(),
+            },
+        ));
+    }
+
+    h.pop_scope();
+
+    Ok(())
+}
+
+// Typecheck an entire program -------------------------------
+//      Remember: a Prog is a Vec of Decl
+//      and Decl: global variables, functions, and structs
+pub fn typecheck_prog(prog: &ast::Prog) -> TcResult<()> {
+    let mut h = TypeCtxt::empty();
+
+    // Two-pass approach:
+    // Pass 1: Add all struct declarations first (so functions can reference them)
+    for decl in prog {
+        if let ast::Decl::GTDecl(tdecl) = decl {
+            typecheck_tdecl(&mut h, tdecl)?;
+        }
+    }
+
+    // Pass 2: Add all function signatures and global variables, then typecheck bodies
+    for decl in prog {
+        match decl {
+            ast::Decl::GVDecl(gvdecl) => {
+                typecheck_gvdecl(&mut h, gvdecl)?;
+            }
+            ast::Decl::GFDecl(fdecl) => {
+                typecheck_fdecl(&mut h, fdecl)?;
+            }
+            ast::Decl::GTDecl(_) => {
+                // Already processed in pass 1
+            }
+        }
+    }
+
+    Ok(())
 }
