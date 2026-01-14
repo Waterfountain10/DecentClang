@@ -178,3 +178,9 @@ pub fn typ_of_unop(u: &ast::UnOp) -> (Ty, Ty) {
         LogNot => (Ty::TBool, Ty::TBool),
     }
 }
+
+// Typechecker implementation module
+pub mod typechecker;
+
+// Re-export main typechecking function for external use
+pub use typechecker::typecheck_prog;
