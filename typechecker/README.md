@@ -18,11 +18,10 @@ The typechecker does not modify the AST.
 
 Tests:
 
-    cargo test -p typechecker
-
-Run specific test suites:
-
+```rust
+    cargo test -p typechecker // all tests
     cargo test -p typechecker easy_tests
     cargo test -p typechecker hard_tests
+```
 
 Test coverage includes 5 easy tests for basic functionality and 10 hard tests for complex scenarios including scoping, return path analysis, subtyping, and error cases.
